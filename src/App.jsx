@@ -2,6 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 import PagePlaceholder from "./components/common/PagePlaceholder";
+import CategoriesPage from "./pages/categories/CategoriesPage";
 import { NAV_ITEMS } from "./config/navigation";
 
 function App() {
@@ -20,9 +21,12 @@ function App() {
       }
     });
 
-    return paths.map((path) => (
-      <Route key={path} path={path} element={<PagePlaceholder />} />
-    ));
+    return paths.map((path) => {
+      if (path === "/categories") {
+        return <Route key={path} path={path} element={<CategoriesPage />} />;
+      }
+      return <Route key={path} path={path} element={<PagePlaceholder />} />;
+    });
   };
 
   return (
