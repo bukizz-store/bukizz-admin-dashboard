@@ -1,5 +1,6 @@
 import React from "react";
 import { Bell, Search, Menu, User } from "lucide-react";
+import Breadcrumbs from "../common/Breadcrumbs";
 
 const Header = ({ onMenuClick }) => {
   return (
@@ -13,11 +14,7 @@ const Header = ({ onMenuClick }) => {
           <Menu size={20} />
         </button>
 
-        <div className="hidden sm:flex items-center text-sm text-slate-500">
-          <span className="hover:text-slate-800 cursor-pointer">Admin</span>
-          <span className="mx-2">/</span>
-          <span className="font-medium text-slate-800">Dashboard</span>
-        </div>
+        <Breadcrumbs />
       </div>
 
       {/* Right: Actions */}

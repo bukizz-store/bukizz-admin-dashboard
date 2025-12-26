@@ -2,7 +2,7 @@ import React from "react";
 import { BrowserRouter, Routes, Route } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 import PagePlaceholder from "./components/common/PagePlaceholder";
-import { navigationConfig } from "./data/navigation";
+import { NAV_ITEMS } from "./config/navigation";
 
 function App() {
   // Helper to flatten nested routes if we ever need to generate them dynamically from config
@@ -11,7 +11,7 @@ function App() {
   const renderRoutes = () => {
     // Collect all paths from config
     const paths = [];
-    navigationConfig.forEach((item) => {
+    NAV_ITEMS.forEach((item) => {
       if (item.path) paths.push(item.path);
       if (item.items) {
         item.items.forEach((subItem) => {
