@@ -1,0 +1,47 @@
+import React from "react";
+import { BrowserRouter, Routes, Route } from "react-router-dom";
+import MainLayout from "./layouts/MainLayout";
+import PagePlaceholder from "./components/common/PagePlaceholder";
+import { navigationConfig } from "./data/navigation";
+
+function App() {
+  // Helper to flatten nested routes if we ever need to generate them dynamically from config
+  // For now, we manually map them to ensure everything works as expected with the Placeholder
+
+  const renderRoutes = () => {
+    // Collect all paths from config
+    const paths = [];
+    navigationConfig.forEach((item) => {
+      if (item.path) paths.push(item.path);
+      if (item.items) {
+        item.items.forEach((subItem) => {
+          if (subItem.path) paths.push(subItem.path);
+        });
+      }
+    });
+
+    return paths.map((path) => (
+      <Route key={path} path={path} element={<PagePlaceholder />} />
+    ));
+  };
+
+  return (
+    <BrowserRouter>
+      <Routes>
+        <Route path="/" element={<MainLayout />}>
+          {renderRoutes()}
+          <Route
+            path="*"
+            element={
+              <div className="p-8 text-center text-slate-500">
+                404 - Page Not Found
+              </div>
+            }
+          />
+        </Route>
+      </Routes>
+    </BrowserRouter>
+  );
+}
+
+export default App;

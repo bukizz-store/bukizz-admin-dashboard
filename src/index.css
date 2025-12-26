@@ -1,0 +1,15 @@
+@import "tailwindcss";
+
+@theme {
+  --color-bukizz-navy: #0f172a;
+  --color-bukizz-navyLight: #1e293b;
+  --color-bukizz-orange: #f97316;
+  --color-bukizz-bg: #f1f5f9;
+}
+
+@layer base {
+    body {
+    font-family: "Inter", sans-serif;
+    background-color: var(--color-bukizz-bg);
+  }
+}
