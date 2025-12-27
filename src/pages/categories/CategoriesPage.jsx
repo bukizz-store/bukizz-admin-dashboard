@@ -211,10 +211,10 @@ const CategoriesPage = () => {
       {/* Controls */}
       <FilterBar
         onSearch={(val) => console.log("Search:", val)}
-        filters={[
-          { label: "All Branches", options: ["Main Branch", "Downtown"] },
+        filterConfig={[
+          { label: "Branches", options: ["Main Branch", "Downtown"] },
           {
-            label: "Status: Active & Inactive",
+            label: "Status",
             options: ["Active", "Inactive"],
           },
         ]}
@@ -232,7 +232,7 @@ const CategoriesPage = () => {
       {/* Footer */}
       <Pagination
         currentPage={1}
-        totalPages={1}
+        totalPages={5}
         itemsPerPage={10}
         totalItems={42}
         onPageChange={() => {}}
