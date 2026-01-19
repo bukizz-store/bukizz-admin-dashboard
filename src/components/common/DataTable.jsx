@@ -1,6 +1,12 @@
 import React from "react";
 
-const DataTable = ({ columns, data, actions }) => {
+const DataTable = ({
+  columns,
+  data,
+  actions,
+  onRowClick,
+  emptyMessage = "No data found.",
+}) => {
   return (
     <div className="bg-white rounded-lg shadow-sm border border-slate-200 overflow-hidden">
       <div className="overflow-x-auto">
@@ -27,7 +33,10 @@ const DataTable = ({ columns, data, actions }) => {
               data.map((row, rowIndex) => (
                 <tr
                   key={row.id || rowIndex}
-                  className="hover:bg-slate-50 transition-colors"
+                  onClick={() => onRowClick && onRowClick(row)}
+                  className={`hover:bg-slate-50 transition-colors ${
+                    onRowClick ? "cursor-pointer" : ""
+                  }`}
                 >
                   {columns.map((col, colIndex) => (
                     <td
@@ -50,7 +59,7 @@ const DataTable = ({ columns, data, actions }) => {
                   colSpan={columns.length + (actions ? 1 : 0)}
                   className="px-6 py-8 text-center text-slate-500 text-sm"
                 >
-                  No data found.
+                  {emptyMessage}
                 </td>
               </tr>
             )}

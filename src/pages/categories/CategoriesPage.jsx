@@ -29,8 +29,8 @@ const CategoriesPage = () => {
     isActiveParam === "true"
       ? "Active"
       : isActiveParam === "false"
-      ? "Inactive"
-      : "";
+        ? "Inactive"
+        : "";
 
   // 2. Local State for UI/Data
   const [categories, setCategories] = useState([]);
@@ -85,12 +85,12 @@ const CategoriesPage = () => {
           search: currentSearch,
           sortBy: currentSortBy,
           sortOrder: currentSortOrder,
+          rootOnly: true,
           ...(isActiveParam !== null && {
             isActive: isActiveParam === "true",
           }),
         };
 
-        console.log(params);
         const response = await api.get("/categories", { params });
 
         // Expected Response: { success: true, data: { categories: [], pagination: { total, totalPages, ... } } }
@@ -102,7 +102,7 @@ const CategoriesPage = () => {
           });
         } else {
           throw new Error(
-            response.data?.message || "Failed to fetch categories"
+            response.data?.message || "Failed to fetch categories",
           );
         }
       } catch (err) {
@@ -170,7 +170,7 @@ const CategoriesPage = () => {
   // Helper for placeholder images
   const getPlaceholderImage = (name) =>
     `https://source.unsplash.com/random/200x200?${encodeURIComponent(
-      name || "category"
+      name || "category",
     )}`;
 
   // 6. Columns
@@ -247,7 +247,10 @@ const CategoriesPage = () => {
 
   // Grid Item Renderer
   const renderGridItem = (item) => (
-    <div className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 border border-slate-100 flex flex-col h-full group">
+    <div
+      onClick={() => navigate(`/categories/${item.id}`)}
+      className="bg-white rounded-lg shadow-sm hover:shadow-md transition-shadow p-4 border border-slate-100 flex flex-col h-full group cursor-pointer"
+    >
       <div className="relative aspect-video rounded-md overflow-hidden mb-3 bg-slate-100">
         <img
           src={item.image || getPlaceholderImage(item.name)}
@@ -290,7 +293,10 @@ const CategoriesPage = () => {
           variant="secondary"
           size="sm"
           icon={Pencil}
-          onClick={() => navigate(`/categories/edit/${item.id}`)}
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/categories/edit/${item.id}`);
+          }}
         >
           Edit
         </Button>
@@ -300,7 +306,10 @@ const CategoriesPage = () => {
 
   const actions = (row) => (
     <button
-      onClick={() => navigate(`/categories/edit/${row.id}`)}
+      onClick={(e) => {
+        e.stopPropagation();
+        navigate(`/categories/edit/${row.id}`);
+      }}
       className="p-2 text-slate-400 hover:text-bukizz-orange hover:bg-orange-50 rounded-full transition-colors"
     >
       <Pencil size={16} />
@@ -367,7 +376,12 @@ const CategoriesPage = () => {
             <p>No categories found.</p>
           </div>
         ) : currentView === "list" ? (
-          <DataTable columns={columns} data={categories} actions={actions} />
+          <DataTable
+            columns={columns}
+            data={categories}
+            actions={actions}
+            onRowClick={(row) => navigate(`/categories/${row.id}`)}
+          />
         ) : (
           <DataGrid data={categories} renderItem={renderGridItem} />
         )}

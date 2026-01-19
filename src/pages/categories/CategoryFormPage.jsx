@@ -1,5 +1,10 @@
 import React, { useState, useEffect } from "react";
-import { useParams, useNavigate, Link } from "react-router-dom";
+import {
+  useParams,
+  useNavigate,
+  Link,
+  useSearchParams,
+} from "react-router-dom";
 import { ArrowLeft, Edit3, Image as ImageIcon } from "lucide-react";
 import {
   Input,
@@ -12,15 +17,16 @@ import api from "../../services/api";
 const CategoryFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+  const [searchParams] = useSearchParams();
   const isEditMode = Boolean(id);
+  const parentIdParam = searchParams.get("parentId");
 
   const [isLoading, setIsLoading] = useState(false);
   const [formData, setFormData] = useState({
     name: "",
     slug: "",
     description: "",
-    description: "",
-    parentId: null,
+    parentId: parentIdParam || null,
   });
   const [imageFile, setImageFile] = useState(null);
   const [initialImagePreview, setInitialImagePreview] = useState(null);

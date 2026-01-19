@@ -4,6 +4,7 @@ import MainLayout from "./layouts/MainLayout";
 import PagePlaceholder from "./components/common/PagePlaceholder";
 import CategoriesPage from "./pages/categories/CategoriesPage";
 import CategoryFormPage from "./pages/categories/CategoryFormPage";
+import CategoryDetailPage from "./pages/categories/CategoryDetailPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -56,6 +57,10 @@ function App() {
                 <Route
                   path="/categories/edit/:id"
                   element={<CategoryFormPage />}
+                />
+                <Route
+                  path="/categories/:id"
+                  element={<CategoryDetailPage />}
                 />
 
                 {renderDashboardRoutes()}
