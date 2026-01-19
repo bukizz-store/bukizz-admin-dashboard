@@ -3,6 +3,7 @@ import { Search, LayoutGrid, List, ChevronDown, Check } from "lucide-react";
 
 const FilterBar = ({
   onSearch,
+  searchTerm,
   filterConfig = [],
   view,
   onViewChange,
@@ -20,6 +21,7 @@ const FilterBar = ({
           <input
             type="text"
             placeholder="Search..."
+            value={searchTerm || ""}
             onChange={(e) => onSearch && onSearch(e.target.value)}
             className="w-full pl-10 pr-4 py-2 bg-slate-50 border-none rounded-md text-sm text-slate-700 placeholder:text-slate-400 focus:ring-2 focus:ring-bukizz-orange/20 focus:outline-none transition-all"
           />
@@ -87,6 +89,13 @@ const FilterDropdown = ({ filter }) => {
     document.addEventListener("mousedown", handleClickOutside);
     return () => document.removeEventListener("mousedown", handleClickOutside);
   }, []);
+
+  // Sync local selection if filter.value changes (external control)
+  useEffect(() => {
+    if (filter.value !== undefined) {
+      setSelected(filter.value);
+    }
+  }, [filter.value]);
 
   const handleSelect = (value) => {
     setSelected(value);

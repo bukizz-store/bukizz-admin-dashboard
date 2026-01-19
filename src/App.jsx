@@ -3,6 +3,7 @@ import { BrowserRouter, Routes, Route, Navigate } from "react-router-dom";
 import MainLayout from "./layouts/MainLayout";
 import PagePlaceholder from "./components/common/PagePlaceholder";
 import CategoriesPage from "./pages/categories/CategoriesPage";
+import CategoryFormPage from "./pages/categories/CategoryFormPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -47,6 +48,16 @@ function App() {
             {/* Protected Dashboard Routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<MainLayout />}>
+                {/* Specific Routes for Categories */}
+                <Route
+                  path="/categories/create"
+                  element={<CategoryFormPage />}
+                />
+                <Route
+                  path="/categories/edit/:id"
+                  element={<CategoryFormPage />}
+                />
+
                 {renderDashboardRoutes()}
                 <Route path="profile" element={<UserProfile />} />
                 <Route

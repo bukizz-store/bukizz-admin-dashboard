@@ -7,9 +7,17 @@ const MultiSelectChips = ({
   placeholder = "Type and press Enter...",
   onChange,
   className = "",
+  value, // Add value prop for controlled usage/initialization
 }) => {
   const [inputValue, setInputValue] = useState("");
-  const [chips, setChips] = useState([]);
+  const [chips, setChips] = useState(value || []);
+
+  // Sync with external value if provided
+  React.useEffect(() => {
+    if (value !== undefined) {
+      setChips(value);
+    }
+  }, [value]);
 
   const handleKeyDown = (e) => {
     if (e.key === "Enter" && inputValue.trim()) {

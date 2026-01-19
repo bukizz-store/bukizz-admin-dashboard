@@ -7,8 +7,19 @@ const ImageUpload = ({
   onChange,
   multiple = false,
   className = "",
+  initialPreview, // Add initialPreview prop
 }) => {
-  const [previews, setPreviews] = useState([]);
+  const [previews, setPreviews] = useState(
+    initialPreview ? [initialPreview] : []
+  );
+
+  // Sync with initialPreview (e.g. when data loads)
+  React.useEffect(() => {
+    if (initialPreview && previews.length === 0) {
+      setPreviews([initialPreview]);
+    }
+  }, [initialPreview]);
+
   const inputRef = useRef(null);
 
   const handleFileChange = (e) => {
