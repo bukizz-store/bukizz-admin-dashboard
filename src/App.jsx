@@ -5,6 +5,8 @@ import PagePlaceholder from "./components/common/PagePlaceholder";
 import CategoriesPage from "./pages/categories/CategoriesPage";
 import CategoryFormPage from "./pages/categories/CategoryFormPage";
 import CategoryDetailPage from "./pages/categories/CategoryDetailPage";
+import SchoolsListPage from "./pages/schools/SchoolsListPage";
+import SchoolFormPage from "./pages/schools/SchoolFormPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -32,6 +34,9 @@ function App() {
     return paths.map((path) => {
       if (path === "/categories") {
         return <Route key={path} path={path} element={<CategoriesPage />} />;
+      }
+      if (path === "/schools") {
+        return <Route key={path} path={path} element={<SchoolsListPage />} />;
       }
       return <Route key={path} path={path} element={<PagePlaceholder />} />;
     });
@@ -62,6 +67,10 @@ function App() {
                   path="/categories/:id"
                   element={<CategoryDetailPage />}
                 />
+
+                {/* Specific Routes for Schools */}
+                <Route path="/schools/create" element={<SchoolFormPage />} />
+                <Route path="/schools/edit/:id" element={<SchoolFormPage />} />
 
                 {renderDashboardRoutes()}
                 <Route path="profile" element={<UserProfile />} />
