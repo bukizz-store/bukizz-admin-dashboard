@@ -7,6 +7,7 @@ import CategoryFormPage from "./pages/categories/CategoryFormPage";
 import CategoryDetailPage from "./pages/categories/CategoryDetailPage";
 import SchoolsListPage from "./pages/schools/SchoolsListPage";
 import SchoolFormPage from "./pages/schools/SchoolFormPage";
+import SchoolDetailPage from "./pages/schools/SchoolDetailPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -71,6 +72,7 @@ function App() {
                 {/* Specific Routes for Schools */}
                 <Route path="/schools/create" element={<SchoolFormPage />} />
                 <Route path="/schools/edit/:id" element={<SchoolFormPage />} />
+                <Route path="/schools/:id" element={<SchoolDetailPage />} />
 
                 {renderDashboardRoutes()}
                 <Route path="profile" element={<UserProfile />} />
