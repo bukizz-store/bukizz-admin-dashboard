@@ -6,6 +6,7 @@ import {
   Backpack,
   ShoppingBag,
   ClipboardList,
+  Store,
 } from "lucide-react";
 
 export const NAV_ITEMS = [
@@ -25,6 +26,12 @@ export const NAV_ITEMS = [
     label: "Schools",
     path: "/schools",
     icon: GraduationCap,
+    group: "main",
+  },
+  {
+    label: "Retailers",
+    path: "/retailers",
+    icon: Store,
     group: "main",
   },
   {
@@ -64,6 +71,7 @@ export const PATH_LABEL_MAP = {
   "/": "Dashboard",
   "/categories": "Categories",
   "/schools": "Schools",
+  "/retailers": "Retailers",
   "/schools/add": "Onboard School",
   "/products": "All Products",
   "/products/school": "School Products",
