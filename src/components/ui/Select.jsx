@@ -33,11 +33,16 @@ const Select = ({
           <option value="" disabled>
             {placeholder}
           </option>
-          {options.map((opt) => (
-            <option key={opt.value} value={opt.value}>
-              {opt.label}
-            </option>
-          ))}
+          {options.map((opt) => {
+            const isString = typeof opt === "string";
+            const value = isString ? opt : opt.value;
+            const label = isString ? opt : opt.label;
+            return (
+              <option key={value} value={value}>
+                {label}
+              </option>
+            );
+          })}
         </select>
 
         <div className="absolute right-3 top-1/2 -translate-y-1/2 text-slate-400 pointer-events-none">

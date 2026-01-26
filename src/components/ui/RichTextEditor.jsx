@@ -36,7 +36,8 @@ const RichTextEditor = ({ label, error, className = "", ...props }) => {
         <textarea
           className="w-full min-h-[120px] p-3 text-sm text-slate-700 focus:outline-none resize-y"
           placeholder="Start typing..."
-          {...props}
+          value={props.value}
+          onChange={(e) => props.onChange && props.onChange(e.target.value)}
         />
       </div>
 

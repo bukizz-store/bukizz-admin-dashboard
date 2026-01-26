@@ -11,6 +11,8 @@ import SchoolDetailPage from "./pages/schools/SchoolDetailPage";
 import RetailersListPage from "./pages/retailers/RetailersListPage";
 import RetailerFormPage from "./pages/retailers/RetailerFormPage";
 import RetailerDetailPage from "./pages/retailers/RetailerDetailPage";
+import ProductListPage from "./pages/products/ProductListPage";
+import ProductFormPage from "./pages/products/ProductFormPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -84,6 +86,14 @@ function App() {
                   element={<RetailerFormPage />}
                 />
                 <Route path="/retailers/:id" element={<RetailerDetailPage />} />
+
+                {/* Products */}
+                <Route path="/products" element={<ProductListPage />} />
+                <Route path="/products/create" element={<ProductFormPage />} />
+                <Route
+                  path="/products/edit/:id"
+                  element={<ProductFormPage />}
+                />
 
                 {renderDashboardRoutes()}
                 <Route path="profile" element={<UserProfile />} />

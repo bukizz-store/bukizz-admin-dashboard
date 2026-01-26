@@ -7,42 +7,32 @@ const ImageUpload = ({
   onChange,
   multiple = false,
   className = "",
-  initialPreview, // Add initialPreview prop
+  values = [], // Controlled prop: array of File objects or URL strings
 }) => {
-  const [previews, setPreviews] = useState(
-    initialPreview ? [initialPreview] : []
-  );
-
-  // Sync with initialPreview (e.g. when data loads)
-  React.useEffect(() => {
-    if (initialPreview && previews.length === 0) {
-      setPreviews([initialPreview]);
-    }
-  }, [initialPreview]);
-
   const inputRef = useRef(null);
+
+  const getPreview = (file) => {
+    if (typeof file === "string") return file;
+    return URL.createObjectURL(file);
+  };
 
   const handleFileChange = (e) => {
     const files = Array.from(e.target.files);
     if (files.length > 0) {
       if (multiple) {
-        // Just styling for now, actual logic depends on backend
-        // We'll create object URLs for preview
-        const newPreviews = files.map((file) => URL.createObjectURL(file));
-        setPreviews([...previews, ...newPreviews]);
+        onChange && onChange([...values, ...files]);
       } else {
-        const url = URL.createObjectURL(files[0]);
-        setPreviews([url]);
+        onChange && onChange([files[0]]);
       }
-      onChange && onChange(files);
+      // Reset input value to allow re-uploading same file if needed
+      e.target.value = null;
     }
   };
 
   const removeImage = (index) => {
-    const newPreviews = [...previews];
-    newPreviews.splice(index, 1);
-    setPreviews(newPreviews);
-    // NOTE: We should also clear the input value if empty, but complex for standard file inputs
+    const newValues = [...values];
+    newValues.splice(index, 1);
+    onChange && onChange(newValues);
   };
 
   return (
@@ -87,15 +77,15 @@ const ImageUpload = ({
       </div>
 
       {/* Previews */}
-      {previews.length > 0 && (
+      {values.length > 0 && (
         <div className="flex flex-wrap gap-4 mt-2">
-          {previews.map((src, index) => (
+          {values.map((file, index) => (
             <div
               key={index}
               className="relative w-24 h-24 rounded-lg border border-slate-200 overflow-hidden group"
             >
               <img
-                src={src}
+                src={getPreview(file)}
                 alt="Preview"
                 className="w-full h-full object-cover"
               />
