@@ -164,8 +164,8 @@ const CategoryFormPage = () => {
             <RichTextEditor
               label="Description"
               value={formData.description}
-              onChange={(e) =>
-                setFormData({ ...formData, description: e.target.value })
+              onChange={(val) =>
+                setFormData({ ...formData, description: val })
               }
               placeholder="Enter details about this category..."
             />
