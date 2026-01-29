@@ -164,6 +164,7 @@ const ProductBasicInfo = ({
           label="Full Description"
           value={formData.fullDescription}
           onChange={(val) => setFormData({ ...formData, fullDescription: val })}
+          returnHtml={true}
         />
       </div>
     </div>

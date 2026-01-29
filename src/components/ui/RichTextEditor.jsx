@@ -250,7 +250,14 @@ const ImageResizeMenu = ({ editor }) => {
 /**
  * RichTextEditor Component
  */
-const RichTextEditor = ({ label, error, className = "", value, onChange }) => {
+const RichTextEditor = ({
+  label,
+  error,
+  className = "",
+  value,
+  onChange,
+  returnHtml = false,
+}) => {
   const [showTableDialog, setShowTableDialog] = useState(false);
   const [tableRows, setTableRows] = useState(3);
   const [tableCols, setTableCols] = useState(3);
@@ -280,7 +287,9 @@ const RichTextEditor = ({ label, error, className = "", value, onChange }) => {
     ],
     content: value,
     onUpdate: ({ editor }) => {
-      onChange(editor.getHTML());
+      // Return HTML or plain text based on returnHtml prop
+      const content = returnHtml ? editor.getHTML() : editor.getText();
+      onChange(content);
     },
     editorProps: {
       attributes: {
