@@ -164,9 +164,7 @@ const CategoryFormPage = () => {
             <RichTextEditor
               label="Description"
               value={formData.description}
-              onChange={(val) =>
-                setFormData({ ...formData, description: val })
-              }
+              onChange={(val) => setFormData({ ...formData, description: val })}
               placeholder="Enter details about this category..."
             />
           </div>
@@ -186,9 +184,20 @@ const CategoryFormPage = () => {
           <div className="space-y-6">
             <ImageUpload
               label="Category Image"
-              initialPreview={initialImagePreview}
+              values={
+                imageFile
+                  ? [imageFile]
+                  : initialImagePreview
+                    ? [initialImagePreview]
+                    : []
+              }
               onChange={(files) => {
-                if (files && files.length > 0) setImageFile(files[0]);
+                if (files && files.length > 0) {
+                  setImageFile(files[0]);
+                } else {
+                  setImageFile(null);
+                  setInitialImagePreview(null);
+                }
               }}
             />
           </div>
