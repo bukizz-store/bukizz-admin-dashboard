@@ -36,6 +36,7 @@ const ProductFormPage = () => {
   const [school, setSchool] = useState(null);
   const [grade, setGrade] = useState("");
   const [isMandatory, setIsMandatory] = useState(false);
+  const [schoolProductType, setSchoolProductType] = useState("bookset"); // 'bookset' | 'uniform' | 'stationary'
 
   // Section B: Options & Variants
   const [productOptions, setProductOptions] = useState([]); // [{ id: 1, name: 'Size', values: ['S', 'M'] }]
@@ -72,12 +73,13 @@ const ProductFormPage = () => {
   };
 
   const loadSchools = async (query) => {
+    if (!formData.city) return []; // Require city to be selected first
     try {
       const params = {
         page: 1,
         limit: 20,
         search: query || "",
-        // city: "Mumbai", // Using specific city as requested
+        city: formData.city, // Filter by selected city
       };
       const response = await api.get("/schools", { params });
       if (response.data?.success) {
@@ -302,7 +304,8 @@ const ProductFormPage = () => {
         productData: {
           title: formData.title,
           sku: formData.sku,
-          productType: productType, // Backend expects: bookset, uniform, stationary, school, general
+          // For school products, send the specific type (bookset/uniform/stationary)
+          productType: productType === "school" ? schoolProductType : "general",
           basePrice: Number(formData.basePrice),
           shortDescription: formData.shortDescription,
           description: formData.fullDescription, // Mapped from fullDescription
@@ -412,6 +415,8 @@ const ProductFormPage = () => {
             setGrade={setGrade}
             isMandatory={isMandatory}
             setIsMandatory={setIsMandatory}
+            schoolProductType={schoolProductType}
+            setSchoolProductType={setSchoolProductType}
             loaders={{ loadBrands, loadCategories, loadSchools }}
           />
 

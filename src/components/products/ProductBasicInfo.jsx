@@ -14,6 +14,8 @@ const ProductBasicInfo = ({
   setGrade,
   isMandatory,
   setIsMandatory,
+  schoolProductType,
+  setSchoolProductType,
   loaders,
 }) => {
   const { loadBrands, loadCategories, loadSchools } = loaders;
@@ -72,63 +74,108 @@ const ProductBasicInfo = ({
       {/* Context Fields */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {productType === "general" ? (
-          <AsyncSelect
-            label="Category"
-            placeholder="Select Category"
-            loadOptions={loadCategories}
-            value={category}
-            onChange={setCategory}
-          />
-        ) : (
           <>
             <AsyncSelect
+              label="Category"
+              placeholder="Select Category"
+              loadOptions={loadCategories}
+              value={category}
+              onChange={setCategory}
+            />
+            <Input
+              label="City Availability"
+              placeholder="e.g. New Delhi"
+              value={formData.city}
+              onChange={(e) =>
+                setFormData({ ...formData, city: e.target.value })
+              }
+            />
+          </>
+        ) : (
+          <>
+            <Select
+              label="City"
+              options={[
+                { value: "gurugram", label: "Gurugram" },
+                { value: "kanpur", label: "Kanpur" },
+              ]}
+              value={formData.city}
+              onChange={(e) => {
+                setFormData({ ...formData, city: e.target.value });
+                setSchool(null); // Reset school when city changes
+              }}
+            />
+            <AsyncSelect
+              key={formData.city} // Re-fetch schools when city changes
               label="School"
-              placeholder="Select School"
+              placeholder={
+                formData.city ? "Select School" : "Select city first"
+              }
               loadOptions={loadSchools}
               value={school}
               onChange={setSchool}
+              isDisabled={!formData.city}
             />
-            <div className="flex gap-4">
-              <Select
-                label="Grade"
-                options={[
-                  "Nursery",
-                  "LKG",
-                  "UKG",
-                  "1st",
-                  "2nd",
-                  "3rd",
-                  "4th",
-                  "5th",
-                  "6th",
-                  "7th",
-                  "8th",
-                  "9th",
-                  "10th",
-                  "11th",
-                  "12th",
-                ]}
-                value={grade}
-                onChange={(e) => setGrade(e.target.value)}
-                className="flex-1"
-              />
-              <div className="flex items-center pt-6">
-                <label className="flex items-center gap-2 cursor-pointer">
-                  <input
-                    type="checkbox"
-                    checked={isMandatory}
-                    onChange={(e) => setIsMandatory(e.target.checked)}
-                    className="rounded text-bukizz-orange focus:ring-bukizz-orange"
-                  />
-                  <span className="text-sm font-medium text-slate-700">
-                    Mandatory
-                  </span>
-                </label>
-              </div>
-            </div>
           </>
         )}
       </div>
+
+      {/* Product Type for School */}
+      {productType === "school" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <Select
+            label="Product Type"
+            options={[
+              { value: "bookset", label: "Book Set" },
+              { value: "uniform", label: "Uniform" },
+              { value: "stationary", label: "Stationary" },
+            ]}
+            value={schoolProductType}
+            onChange={(e) => setSchoolProductType(e.target.value)}
+          />
+        </div>
+      )}
+
+      {/* Grade and Mandatory (only for bookset) */}
+      {productType === "school" && schoolProductType === "bookset" && (
+        <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+          <Select
+            label="Grade"
+            options={[
+              "Nursery",
+              "LKG",
+              "UKG",
+              "1st",
+              "2nd",
+              "3rd",
+              "4th",
+              "5th",
+              "6th",
+              "7th",
+              "8th",
+              "9th",
+              "10th",
+              "11th",
+              "12th",
+            ]}
+            value={grade}
+            onChange={(e) => setGrade(e.target.value)}
+          />
+          <div className="flex items-center pt-6">
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={isMandatory}
+                onChange={(e) => setIsMandatory(e.target.checked)}
+                className="rounded text-bukizz-orange focus:ring-bukizz-orange"
+              />
+              <span className="text-sm font-medium text-slate-700">
+                Mandatory
+              </span>
+            </label>
+          </div>
+        </div>
+      )}
 
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         <Input
@@ -138,10 +185,13 @@ const ProductBasicInfo = ({
           onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
         />
         <Input
-          label="City Availability"
-          placeholder="e.g. New Delhi"
-          value={formData.city}
-          onChange={(e) => setFormData({ ...formData, city: e.target.value })}
+          label="Base Price"
+          type="number"
+          placeholder="0.00"
+          value={formData.basePrice}
+          onChange={(e) =>
+            setFormData({ ...formData, basePrice: e.target.value })
+          }
         />
       </div>
 
