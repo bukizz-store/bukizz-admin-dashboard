@@ -22,6 +22,8 @@ const ProductListPage = () => {
   const currentSearch = searchParams.get("search") || "";
   const currentType = searchParams.get("productType") || ""; // Empty for all
   const currentIsActive = searchParams.get("isActive") || "";
+  const currentCity = searchParams.get("city") || "";
+  const currentRetailer = searchParams.get("retailer") || "";
 
   // 2. Local State
   const [products, setProducts] = useState([]);
@@ -35,6 +37,9 @@ const ProductListPage = () => {
   const [isDeleting, setIsDeleting] = useState(false);
   const [searchTerm, setSearchTerm] = useState(currentSearch);
   const [viewMode, setViewMode] = useState("list"); // 'list' | 'grid'
+  const [togglingIds, setTogglingIds] = useState(new Set()); // Track products being toggled
+  const [cities, setCities] = useState([]); // Unique cities
+  const [retailers, setRetailers] = useState([]); // Unique retailers
 
   // Sync search term
   useEffect(() => {
@@ -71,9 +76,8 @@ const ProductListPage = () => {
         search: currentSearch || undefined,
         productType: currentType || undefined,
         isActive: currentIsActive || undefined,
-        // Add other filters as needed
-        // category: currentCategory || undefined,
-        // brand: currentBrand || undefined,
+        city: currentCity || undefined,
+        retailer: currentRetailer || undefined,
       };
 
       const response = await api.get("/products", { params });
@@ -95,7 +99,51 @@ const ProductListPage = () => {
 
   useEffect(() => {
     fetchProducts();
-  }, [currentPage, currentLimit, currentSearch, currentType, currentIsActive]);
+  }, [
+    currentPage,
+    currentLimit,
+    currentSearch,
+    currentType,
+    currentIsActive,
+    currentCity,
+    currentRetailer,
+  ]);
+
+  // Fetch unique cities and retailers for filters
+  const fetchFilterOptions = async () => {
+    try {
+      const response = await api.get("/products/filter-options");
+      if (response.data.success) {
+        setCities(response.data.data.cities || []);
+        setRetailers(response.data.data.retailers || []);
+      }
+    } catch (error) {
+      // Fallback: extract from current products if API endpoint doesn't exist
+      console.log(
+        "Filter options endpoint not available, extracting from products",
+      );
+    }
+  };
+
+  // Fallback: Extract unique cities and retailers from loaded products
+  useEffect(() => {
+    if (products.length > 0 && cities.length === 0) {
+      const uniqueCities = [
+        ...new Set(products.map((p) => p.city).filter(Boolean)),
+      ];
+      const uniqueRetailers = [
+        ...new Set(
+          products.map((p) => p.retailer || p.retailerName).filter(Boolean),
+        ),
+      ];
+      if (uniqueCities.length > 0) setCities(uniqueCities);
+      if (uniqueRetailers.length > 0) setRetailers(uniqueRetailers);
+    }
+  }, [products]);
+
+  useEffect(() => {
+    fetchFilterOptions();
+  }, []);
 
   // 4. Handlers
   const handleFilterChange = (key, value) => {
@@ -103,7 +151,7 @@ const ProductListPage = () => {
       const ps = new URLSearchParams(prev);
       if (value && value !== "all") ps.set(key, value);
       else ps.delete(key);
-      ps.set("page", "1");
+      if (key !== "page") ps.set("page", "1");
       return ps;
     });
   };
@@ -111,6 +159,43 @@ const ProductListPage = () => {
   const confirmDelete = (product) => {
     setSelectedProduct(product);
     setDeleteModalOpen(true);
+  };
+
+  // Toggle Active/Inactive Status
+  const handleToggleActive = async (product) => {
+    const productId = product.id;
+    const newIsActive = !product.isActive;
+
+    // Add to toggling set
+    setTogglingIds((prev) => new Set([...prev, productId]));
+
+    try {
+      await api.put(`/products/${productId}/status`, {
+        isActive: newIsActive,
+      });
+
+      // Update local state
+      setProducts((prev) =>
+        prev.map((p) =>
+          p.id === productId ? { ...p, isActive: newIsActive } : p,
+        ),
+      );
+
+      toast.success(
+        `Product ${newIsActive ? "activated" : "deactivated"} successfully`,
+      );
+    } catch (error) {
+      console.error("Failed to toggle product status:", error);
+      toast.error(
+        error.response?.data?.message || "Failed to update product status",
+      );
+    } finally {
+      setTogglingIds((prev) => {
+        const newSet = new Set(prev);
+        newSet.delete(productId);
+        return newSet;
+      });
+    }
   };
 
   const handleDelete = async () => {
@@ -139,7 +224,10 @@ const ProductListPage = () => {
           <div className="w-12 h-12 rounded-lg bg-slate-100 border border-slate-200 flex items-center justify-center overflow-hidden shrink-0">
             {row.images && row.images.length > 0 ? (
               <img
-                src={row.images[0]}
+                // Find the primary image, OR default to the first image, THEN access the .url
+                src={
+                  (row.images.find((img) => img.isPrimary) || row.images[0]).url
+                }
                 alt={row.title}
                 className="w-full h-full object-cover"
               />
@@ -199,18 +287,31 @@ const ProductListPage = () => {
       className: "hidden sm:table-cell",
     },
     {
-      header: "Stock",
+      header: "Status",
       accessor: "isActive",
-      render: (row) => (
-        <div className="flex items-center gap-2">
-          <div
-            className={`w-2 h-2 rounded-full ${row.isActive ? "bg-green-500" : "bg-red-500"}`}
-          />
-          <span className="text-sm text-slate-600 hidden lg:inline">
-            {row.isActive ? "Active" : "Inactive"}
-          </span>
-        </div>
-      ),
+      render: (row) => {
+        const isToggling = togglingIds.has(row.id);
+        return (
+          <div className="flex items-center gap-2">
+            <button
+              onClick={() => handleToggleActive(row)}
+              disabled={isToggling}
+              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-bukizz-orange/20 ${
+                isToggling ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
+              } ${row.isActive ? "bg-green-500" : "bg-slate-300"}`}
+            >
+              <span
+                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
+                  row.isActive ? "translate-x-4" : "translate-x-0.5"
+                }`}
+              />
+            </button>
+            <span className="text-sm text-slate-600 hidden lg:inline">
+              {isToggling ? "..." : row.isActive ? "Active" : "Inactive"}
+            </span>
+          </div>
+        );
+      },
     },
     {
       header: "Last Updated",
@@ -314,6 +415,18 @@ const ProductListPage = () => {
                 val ? (val === "Active" ? "true" : "false") : "",
               ),
           },
+          {
+            label: "City",
+            options: cities,
+            value: currentCity,
+            onChange: (val) => handleFilterChange("city", val || ""),
+          },
+          {
+            label: "Retailer",
+            options: retailers,
+            value: currentRetailer,
+            onChange: (val) => handleFilterChange("retailer", val || ""),
+          },
         ]}
         searchPlaceholder="Search by Name, SKU, or Brand..."
       />
@@ -339,9 +452,15 @@ const ProductListPage = () => {
                 className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group"
               >
                 <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
-                  {product.images?.[0] ? (
+                  {product.images?.find((img) => img.isPrimary) ||
+                  product.images?.[0] ? (
                     <img
-                      src={product.images[0]}
+                      src={
+                        (
+                          product.images.find((img) => img.isPrimary) ||
+                          product.images[0]
+                        ).url
+                      }
                       alt={product.title}
                       className="w-full h-full object-cover group-hover:scale-105 transition-transform duration-300"
                     />

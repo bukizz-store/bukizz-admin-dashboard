@@ -101,6 +101,8 @@ const ProductBasicInfo = ({
     try {
       const uploadData = new FormData();
       uploadData.append("image", file);
+      uploadData.append("bucket", "brand");
+      uploadData.append("folder", "logo");
 
       const response = await api.post("/images/upload", uploadData, {
         headers: { "Content-Type": "multipart/form-data" },

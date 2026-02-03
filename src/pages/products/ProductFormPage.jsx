@@ -8,6 +8,7 @@ import ProductFormHeader from "../../components/products/ProductFormHeader";
 import ProductBasicInfo from "../../components/products/ProductBasicInfo";
 import ProductVariants from "../../components/products/ProductVariants";
 import ProductMedia from "../../components/products/ProductMedia";
+import KeyValueManager from "../../components/products/KeyValueManager";
 
 const ProductFormPage = () => {
   const navigate = useNavigate();
@@ -45,6 +46,9 @@ const ProductFormPage = () => {
 
   // Section C: Media
   const [images, setImages] = useState([]);
+
+  // Section D: Product Highlights (Key-Value pairs)
+  const [highlights, setHighlights] = useState([{ key: "", value: "" }]);
 
   // --- Helpers ---
 
@@ -193,13 +197,23 @@ const ProductFormPage = () => {
       ];
     }
 
+    // Helper to extract value string from option value (handles both string and {value, image} objects)
+    const getValueString = (val) => (typeof val === "string" ? val : val.value);
+    const getValueImage = (val) => (typeof val === "object" ? val.image : null);
+
     const cartesian = (args) => {
       const result = [];
       const max = args.length - 1;
       const helper = (arr, i) => {
         for (let j = 0, l = args[i].values.length; j < l; j++) {
           const a = arr.slice(0); // clone arr
-          a.push({ name: args[i].name, value: args[i].values[j] });
+          const val = args[i].values[j];
+          a.push({
+            name: args[i].name,
+            value: getValueString(val),
+            image: getValueImage(val),
+            hasImages: args[i].hasImages,
+          });
           if (i === max) result.push(a);
           else helper(a, i + 1);
         }
@@ -213,7 +227,11 @@ const ProductFormPage = () => {
     return combinations.map((combo, idx) => {
       const variantName = combo.map((c) => c.value).join(" / ");
       const optionMap = combo.reduce(
-        (acc, curr) => ({ ...acc, [curr.name]: curr.value }),
+        (acc, curr) => ({
+          ...acc,
+          [curr.name]: curr.value,
+          ...(curr.image ? { [`${curr.name}_image`]: curr.image } : {}),
+        }),
         {},
       );
       const autoSku = formData.sku
@@ -298,7 +316,17 @@ const ProductFormPage = () => {
       // Filter out failed uploads if any return null/empty (though we throw error above)
       const validImageUrls = uploadedImageUrls.filter((url) => url);
 
-      // 2. Payload Construction
+      // 2. Transform highlights to object
+      console.log("highlights", highlights);
+      const highlightsObject = highlights.reduce((acc, curr) => {
+        if (curr.key.trim() && curr.value.trim()) {
+          acc[curr.key.trim()] = curr.value.trim();
+        }
+        return acc;
+      }, {});
+      console.log("highlightsObject", highlightsObject);
+
+      // 2.5 Payload Construction
       const payload = {
         retailerId: retailer.id,
         productData: {
@@ -311,7 +339,7 @@ const ProductFormPage = () => {
           description: formData.fullDescription, // Mapped from fullDescription
           city: formData.city,
           currency: "INR",
-          metadata: {},
+          highlight: { ...highlightsObject },
         },
         brandData: formData.brand
           ? {
@@ -337,7 +365,13 @@ const ProductFormPage = () => {
             : null,
         productOptions: productOptions.map((opt, idx) => ({
           name: opt.name,
-          values: opt.values,
+          values: opt.values.map((val) => {
+            if (typeof val === "string") {
+              return { value: val, imageUrl: null };
+            }
+            // Handle existing object { value, image }
+            return { value: val.value, imageUrl: val.image || null };
+          }),
           position: idx + 1,
           isRequired: true,
         })),
@@ -418,6 +452,12 @@ const ProductFormPage = () => {
             schoolProductType={schoolProductType}
             setSchoolProductType={setSchoolProductType}
             loaders={{ loadBrands, loadCategories, loadSchools }}
+          />
+
+          {/* Product Highlights Section */}
+          <KeyValueManager
+            highlights={highlights}
+            setHighlights={setHighlights}
           />
 
           <ProductVariants
