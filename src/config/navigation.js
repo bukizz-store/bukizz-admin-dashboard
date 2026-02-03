@@ -7,6 +7,9 @@ import {
   ShoppingBag,
   ClipboardList,
   Store,
+  ClipboardCheck,
+  UserCheck,
+  PackageCheck,
 } from "lucide-react";
 
 export const NAV_ITEMS = [
@@ -64,6 +67,22 @@ export const NAV_ITEMS = [
       },
     ],
   },
+  {
+    group: "Approvals",
+    icon: ClipboardCheck,
+    items: [
+      {
+        path: "/approvals/retailers",
+        label: "Retailers",
+        icon: UserCheck,
+      },
+      {
+        path: "/approvals/products",
+        label: "Products",
+        icon: PackageCheck,
+      },
+    ],
+  },
 ];
 
 // Helper map for Breadcrumbs and Page Titles
@@ -76,5 +95,8 @@ export const PATH_LABEL_MAP = {
   "/products": "All Products",
   "/products/school": "School Products",
   "/products/general": "General Products",
+  "/products/general": "General Products",
+  "/approvals/retailers": "Retailer Approvals",
+  "/approvals/products": "Product Approvals",
   "/orders": "Orders",
 };

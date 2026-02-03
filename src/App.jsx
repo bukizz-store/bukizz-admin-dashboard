@@ -13,6 +13,8 @@ import RetailerFormPage from "./pages/retailers/RetailerFormPage";
 import RetailerDetailPage from "./pages/retailers/RetailerDetailPage";
 import ProductListPage from "./pages/products/ProductListPage";
 import ProductFormPage from "./pages/products/ProductFormPage";
+import RetailerApprovalsPage from "./pages/approvals/RetailerApprovalsPage";
+import ProductApprovalsPage from "./pages/approvals/ProductApprovalsPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -93,6 +95,16 @@ function App() {
                 <Route
                   path="/products/edit/:id"
                   element={<ProductFormPage />}
+                />
+
+                {/* Approvals */}
+                <Route
+                  path="/approvals/retailers"
+                  element={<RetailerApprovalsPage />}
+                />
+                <Route
+                  path="/approvals/products"
+                  element={<ProductApprovalsPage />}
                 />
 
                 {renderDashboardRoutes()}
