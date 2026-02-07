@@ -23,7 +23,6 @@ const ProductListPage = () => {
   const currentType = searchParams.get("productType") || ""; // Empty for all
   const currentIsActive = searchParams.get("isActive") || "";
   const currentCity = searchParams.get("city") || "";
-  const currentRetailer = searchParams.get("retailer") || "";
 
   // 2. Local State
   const [products, setProducts] = useState([]);
@@ -38,8 +37,6 @@ const ProductListPage = () => {
   const [searchTerm, setSearchTerm] = useState(currentSearch);
   const [viewMode, setViewMode] = useState("list"); // 'list' | 'grid'
   const [togglingIds, setTogglingIds] = useState(new Set()); // Track products being toggled
-  const [cities, setCities] = useState([]); // Unique cities
-  const [retailers, setRetailers] = useState([]); // Unique retailers
 
   // Sync search term
   useEffect(() => {
@@ -77,7 +74,7 @@ const ProductListPage = () => {
         productType: currentType || undefined,
         isActive: currentIsActive || undefined,
         city: currentCity || undefined,
-        retailer: currentRetailer || undefined,
+        city: currentCity || undefined,
       };
 
       const response = await api.get("/products", { params });
@@ -106,44 +103,9 @@ const ProductListPage = () => {
     currentType,
     currentIsActive,
     currentCity,
-    currentRetailer,
   ]);
 
-  // Fetch unique cities and retailers for filters
-  const fetchFilterOptions = async () => {
-    try {
-      const response = await api.get("/products/filter-options");
-      if (response.data.success) {
-        setCities(response.data.data.cities || []);
-        setRetailers(response.data.data.retailers || []);
-      }
-    } catch (error) {
-      // Fallback: extract from current products if API endpoint doesn't exist
-      console.log(
-        "Filter options endpoint not available, extracting from products",
-      );
-    }
-  };
-
-  // Fallback: Extract unique cities and retailers from loaded products
-  useEffect(() => {
-    if (products.length > 0 && cities.length === 0) {
-      const uniqueCities = [
-        ...new Set(products.map((p) => p.city).filter(Boolean)),
-      ];
-      const uniqueRetailers = [
-        ...new Set(
-          products.map((p) => p.retailer || p.retailerName).filter(Boolean),
-        ),
-      ];
-      if (uniqueCities.length > 0) setCities(uniqueCities);
-      if (uniqueRetailers.length > 0) setRetailers(uniqueRetailers);
-    }
-  }, [products]);
-
-  useEffect(() => {
-    fetchFilterOptions();
-  }, []);
+  // 146 is empty after removal of fetchFilterOptions effects
 
   // 4. Handlers
   const handleFilterChange = (key, value) => {
@@ -159,6 +121,10 @@ const ProductListPage = () => {
   const confirmDelete = (product) => {
     setSelectedProduct(product);
     setDeleteModalOpen(true);
+  };
+
+  const handleRowClick = (product) => {
+    navigate(`/products/${product.id}`);
   };
 
   // Toggle Active/Inactive Status
@@ -237,8 +203,9 @@ const ProductListPage = () => {
           </div>
           <div className="min-w-0">
             <div
-              className="font-semibold text-slate-900 truncate max-w-50"
+              className="font-semibold text-slate-900 truncate max-w-50 cursor-pointer hover:text-bukizz-orange"
               title={row.title}
+              onClick={() => handleRowClick(row)}
             >
               {row.title}
             </div>
@@ -289,29 +256,26 @@ const ProductListPage = () => {
     {
       header: "Status",
       accessor: "isActive",
-      render: (row) => {
-        const isToggling = togglingIds.has(row.id);
-        return (
-          <div className="flex items-center gap-2">
-            <button
-              onClick={() => handleToggleActive(row)}
-              disabled={isToggling}
-              className={`relative inline-flex h-5 w-9 items-center rounded-full transition-colors focus:outline-none focus:ring-2 focus:ring-bukizz-orange/20 ${
-                isToggling ? "opacity-50 cursor-not-allowed" : "cursor-pointer"
-              } ${row.isActive ? "bg-green-500" : "bg-slate-300"}`}
-            >
-              <span
-                className={`inline-block h-4 w-4 transform rounded-full bg-white shadow transition-transform ${
-                  row.isActive ? "translate-x-4" : "translate-x-0.5"
-                }`}
-              />
-            </button>
-            <span className="text-sm text-slate-600 hidden lg:inline">
-              {isToggling ? "..." : row.isActive ? "Active" : "Inactive"}
-            </span>
-          </div>
-        );
-      },
+      render: (row) => (
+        <span
+          className={`inline-flex px-2 py-1 rounded-full text-xs font-bold ${
+            row.isActive
+              ? "bg-green-100 text-green-800"
+              : "bg-slate-100 text-slate-600"
+          }`}
+        >
+          {row.isActive ? "Active" : "Inactive"}
+        </span>
+      ),
+    },
+    {
+      header: "City",
+      accessor: "town",
+      render: (row) => (
+        <span className="text-sm text-slate-700 capitalize">
+          {row.town || row.city || "-"}
+        </span>
+      ),
     },
     {
       header: "Last Updated",
@@ -326,7 +290,10 @@ const ProductListPage = () => {
       header: "Actions",
       accessor: "actions",
       render: (row) => (
-        <div className="flex items-center justify-end gap-2">
+        <div
+          className="flex items-center justify-end gap-2"
+          onClick={(e) => e.stopPropagation()}
+        >
           <Tooltip content="Edit Product">
             <button
               onClick={() => navigate(`/products/edit/${row.id}`)}
@@ -417,15 +384,9 @@ const ProductListPage = () => {
           },
           {
             label: "City",
-            options: cities,
+            options: ["gurugram", "kanpur"],
             value: currentCity,
             onChange: (val) => handleFilterChange("city", val || ""),
-          },
-          {
-            label: "Retailer",
-            options: retailers,
-            value: currentRetailer,
-            onChange: (val) => handleFilterChange("retailer", val || ""),
           },
         ]}
         searchPlaceholder="Search by Name, SKU, or Brand..."
@@ -443,13 +404,19 @@ const ProductListPage = () => {
             <p>No products found matching your filters.</p>
           </div>
         ) : viewMode === "list" ? (
-          <DataTable columns={columns} data={products} pagination={false} />
+          <DataTable
+            columns={columns}
+            data={products}
+            pagination={false}
+            onRowClick={handleRowClick}
+          />
         ) : (
           <div className="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 lg:grid-cols-4 gap-6">
             {products.map((product) => (
               <div
                 key={product.id}
-                className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group"
+                className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden hover:shadow-md transition-shadow group cursor-pointer"
+                onClick={() => handleRowClick(product)}
               >
                 <div className="aspect-4/3 bg-slate-100 relative overflow-hidden">
                   {product.images?.find((img) => img.isPrimary) ||
@@ -502,7 +469,10 @@ const ProductListPage = () => {
                       </div>
                       <div className="text-xs text-slate-500">Base Price</div>
                     </div>
-                    <div className="flex gap-1">
+                    <div
+                      className="flex gap-1"
+                      onClick={(e) => e.stopPropagation()}
+                    >
                       <button
                         onClick={() => navigate(`/products/edit/${product.id}`)}
                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
