@@ -719,12 +719,21 @@ const RichTextEditor = ({
   });
 
   useEffect(() => {
-    if (editor && value !== editor.getHTML()) {
-      if (editor.getText() === "" && value === "") {
-        editor.commands.clearContent();
-      }
+    if (!editor) return;
+
+    const currentContent = returnHtml ? editor.getHTML() : editor.getText();
+
+    // Only update if content is different to avoid cursor jumps/loops
+    if (value !== currentContent) {
+      // Check if emptiness matches (TipTap sometimes returns <p></p> for empty)
+      const isEmpty = !value || value === "<p></p>" || value === "";
+      const isEditorEmpty = editor.isEmpty;
+
+      if (isEmpty && isEditorEmpty) return;
+
+      editor.commands.setContent(value);
     }
-  }, [value, editor]);
+  }, [value, editor, returnHtml]);
 
   const handleImageClick = () => {
     fileInputRef.current?.click();

@@ -38,10 +38,12 @@ const ProductVariants = ({
   };
 
   const handleOptionChange = (id, field, value) => {
-    const newProductOption = productOptions.map((o) => (o.id === id ? { ...o, [field]: value } : o));
+    const newProductOption = productOptions.map((o) =>
+      o.id === id ? { ...o, [field]: value } : o,
+    );
     console.log(id, field, value);
     setProductOptions(newProductOption);
-    console.log("newProductOption",newProductOption)
+    console.log("newProductOption", newProductOption);
   };
 
   const handleVariantChange = (index, field, value) => {
@@ -110,7 +112,7 @@ const ProductVariants = ({
         Pricing & Variants
       </h2>
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-6">
         <Input
           label="Base Price (₹)"
           type="number"
@@ -121,29 +123,25 @@ const ProductVariants = ({
             setFormData({ ...formData, basePrice: e.target.value })
           }
         />
-        <div className="grid grid-cols-2 gap-2">
-          <AsyncSelect
-            label="1. Select Retailer"
-            placeholder="Search Retailer"
-            loadOptions={loadRetailers}
-            value={retailer}
-            onChange={(val) => {
-              setRetailer(val);
-              setFormData({ ...formData, warehouse: null }); // Reset warehouse when retailer changes
-            }}
-          />
-          <AsyncSelect
-            label="2. Select Warehouse"
-            placeholder={
-              retailer ? "Select Warehouse" : "Select Retailer First"
-            }
-            loadOptions={loadWarehouses}
-            value={formData.warehouse}
-            onChange={(val) => setFormData({ ...formData, warehouse: val })}
-            disabled={!retailer}
-            key={retailer?.id} // Force re-render/re-fetch when retailer changes
-          />
-        </div>
+        <AsyncSelect
+          label="1. Select Retailer"
+          placeholder="Search Retailer"
+          loadOptions={loadRetailers}
+          value={retailer}
+          onChange={(val) => {
+            setRetailer(val);
+            setFormData({ ...formData, warehouse: null }); // Reset warehouse when retailer changes
+          }}
+        />
+        <AsyncSelect
+          label="2. Select Warehouse"
+          placeholder={retailer ? "Select Warehouse" : "Select Retailer First"}
+          loadOptions={loadWarehouses}
+          value={formData.warehouse}
+          onChange={(val) => setFormData({ ...formData, warehouse: val })}
+          disabled={!retailer}
+          key={retailer?.id} // Force re-render/re-fetch when retailer changes
+        />
       </div>
 
       <div className="border-t border-slate-100 pt-6">
