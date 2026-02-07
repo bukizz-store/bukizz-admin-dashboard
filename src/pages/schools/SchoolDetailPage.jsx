@@ -33,6 +33,11 @@ const SchoolDetailPage = () => {
   const [deleteModalOpen, setDeleteModalOpen] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
+  // Product Deletion State
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deleteProductModalOpen, setDeleteProductModalOpen] = useState(false);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+
   const handleDeleteCallback = async () => {
     setIsDeleting(true);
     try {
@@ -48,58 +53,67 @@ const SchoolDetailPage = () => {
     }
   };
 
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setIsDeletingProduct(true);
+    try {
+      await api.delete(`/products/${productToDelete.id}`);
+      toast.success("Product deleted successfully");
+      // Remove from local state
+      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
+    } catch (error) {
+      console.error("Failed to delete product", error);
+      toast.error("Failed to delete product");
+    } finally {
+      setIsDeletingProduct(false);
+      setDeleteProductModalOpen(false);
+      setProductToDelete(null);
+    }
+  };
+
+  // Helper to format category for display
+  const formatCategory = (type) => {
+    if (!type) return "General";
+    const lower = type.toLowerCase();
+    if (lower === "bookset") return "Bookset";
+    if (lower === "uniform" || lower === "uniforms") return "Uniforms";
+    if (lower === "stationary" || lower === "stationery") return "Stationary";
+    return type.charAt(0).toUpperCase() + type.slice(1);
+  };
+
   useEffect(() => {
     const fetchSchoolData = async () => {
       setIsLoading(true);
       try {
-        // Parallel Fetching
-        const [schoolRes, productsRes] = await Promise.all([
-          api.get(`/schools/${id}`),
-          api
-            .get(`/schools/${id}/products`)
-            .catch(() => ({ data: { data: [] } })), // Mock fallback
-          // api.get(`/schools/${id}/stats`), // Uncomment when API exists
-        ]);
+        const response = await api.get(`/schools/${id}`);
 
-        if (schoolRes.data.success) {
-          setSchool(schoolRes.data.data.school);
+        if (response.data.success) {
+          const schoolData = response.data.data.school;
+          setSchool(schoolData);
+
+          // Use products from the school object
+          if (schoolData.products && Array.isArray(schoolData.products)) {
+            const mappedProducts = schoolData.products.map((item) => ({
+              ...item,
+              name: item.title, // Map title to name for the table
+              category: formatCategory(item.product_type),
+              price: item.base_price,
+              stock: item.stock || 0, // Use stock if available, else 0
+              image: item.image || "",
+            }));
+            setProducts(mappedProducts);
+          } else {
+            setProducts([]);
+          }
+
+          // Update stats from analytics if available
+          if (schoolData.analytics) {
+            setStats({
+              totalStudents: schoolData.analytics.totalStudents || 0,
+              activeOrders: schoolData.analytics.totalOrders || 0,
+            });
+          }
         }
-
-        // Mock Products if API fails or is empty for now
-        if (productsRes.data?.data) {
-          setProducts(productsRes.data.data);
-        } else {
-          // Fallback Mock Data
-          setProducts([
-            {
-              id: 101,
-              name: "Math Textbook Class 10",
-              category: "Books",
-              price: 450,
-              stock: 120,
-              image: "",
-            },
-            {
-              id: 102,
-              name: "Summer Uniform Shirt",
-              category: "Uniforms",
-              price: 850,
-              stock: 50,
-              image: "",
-            },
-            {
-              id: 103,
-              name: "Geometry Box Set",
-              category: "Stationery",
-              price: 150,
-              stock: 200,
-              image: "",
-            },
-          ]);
-        }
-
-        // Mock Stats
-        setStats({ totalStudents: 2450, activeOrders: 124 });
       } catch (error) {
         console.error("Fetch Data Error:", error);
         toast.error("Failed to load school details");
@@ -122,6 +136,14 @@ const SchoolDetailPage = () => {
       <div className="p-8 text-center text-slate-500">School not found</div>
     );
   }
+
+  // Filter Logic
+  const filterCategories = ["All Items", "Bookset", "Uniforms", "Stationary"];
+
+  const filteredProducts = products.filter((product) => {
+    if (activeFilter === "All Items") return true;
+    return product.category === activeFilter;
+  });
 
   // Define Columns
   const productColumns = [
@@ -182,10 +204,19 @@ const SchoolDetailPage = () => {
 
   const productActions = (row) => (
     <div className="flex justify-end gap-2">
-      <button className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded">
+      <button
+        className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded"
+        onClick={() => navigate(`/products/edit/${row.id}`)}
+      >
         <Pencil size={16} />
       </button>
-      <button className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded">
+      <button
+        className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded"
+        onClick={() => {
+          setProductToDelete(row);
+          setDeleteProductModalOpen(true);
+        }}
+      >
         <Trash2 size={16} />
       </button>
     </div>
@@ -264,6 +295,17 @@ const SchoolDetailPage = () => {
         message="Are you sure you want to delete this school? This action cannot be undone and will remove all associated products."
         confirmText={isDeleting ? "Deleting..." : "Delete School"}
         isLoading={isDeleting}
+      />
+
+      {/* Product Deletion Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteProductModalOpen}
+        onClose={() => setDeleteProductModalOpen(false)}
+        onConfirm={handleDeleteProduct}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${productToDelete?.name}"? This action cannot be undone.`}
+        confirmText={isDeletingProduct ? "Deleting..." : "Delete Product"}
+        isLoading={isDeletingProduct}
       />
 
       {/* 2. Content Grid */}
@@ -389,27 +431,25 @@ const SchoolDetailPage = () => {
 
                   {/* Filters */}
                   <div className="flex gap-2 overflow-x-auto pb-2">
-                    {["All Items", "Books", "Uniforms", "Stationery"].map(
-                      (filter) => (
-                        <button
-                          key={filter}
-                          onClick={() => setActiveFilter(filter)}
-                          className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
-                            activeFilter === filter
-                              ? "bg-slate-900 text-white"
-                              : "bg-slate-100 text-slate-600 hover:bg-slate-200"
-                          }`}
-                        >
-                          {filter}
-                        </button>
-                      ),
-                    )}
+                    {filterCategories.map((filter) => (
+                      <button
+                        key={filter}
+                        onClick={() => setActiveFilter(filter)}
+                        className={`px-4 py-1.5 rounded-full text-sm font-medium whitespace-nowrap transition-colors ${
+                          activeFilter === filter
+                            ? "bg-slate-900 text-white"
+                            : "bg-slate-100 text-slate-600 hover:bg-slate-200"
+                        }`}
+                      >
+                        {filter}
+                      </button>
+                    ))}
                   </div>
 
                   {/* Table */}
                   <DataTable
                     columns={productColumns}
-                    data={products}
+                    data={filteredProducts}
                     actions={productActions}
                     pagination={true}
                     emptyMessage="No products tagged to this school yet."

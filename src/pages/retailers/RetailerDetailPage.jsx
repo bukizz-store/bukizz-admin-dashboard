@@ -11,8 +11,13 @@ import {
   CheckCircle,
   ChevronDown,
   ChevronUp,
+  Eye,
+  Edit2,
+  Trash2,
+  Package,
+  ShoppingBag,
 } from "lucide-react";
-import { Button } from "../../components/ui";
+import { Button, ConfirmationModal, Tooltip } from "../../components/ui";
 import { StatusBadge, DataTable } from "../../components/common";
 import AddWarehouseModal from "../../components/retailers/AddWarehouseModal";
 import api from "../../services/api";
@@ -29,6 +34,16 @@ const RetailerDetailPage = () => {
   const [isModalOpen, setIsModalOpen] = useState(false);
   const [expandedRows, setExpandedRows] = useState({});
 
+  // Product Tabs State
+  const [activeTab, setActiveTab] = useState("warehouses"); // 'warehouses', 'general-products', 'school-products'
+  const [products, setProducts] = useState([]);
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
+
+  // Product Deletion State
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deleteProductModalOpen, setDeleteProductModalOpen] = useState(false);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
+
   useEffect(() => {
     const fetchData = async () => {
       setIsLoading(true);
@@ -42,6 +57,18 @@ const RetailerDetailPage = () => {
         const warehousesRes = await api.get(`/warehouses/retailer/${id}`);
         console.log("Warehouses Data:", warehousesRes.data.data.warehouses);
         setWarehouses(warehousesRes.data.data.warehouses);
+
+        // Fetch All Products for Retailer (for client-side filtering)
+        const productsRes = await api.get("/products/retailer-search", {
+          params: {
+            retailerId: id,
+            limit: 10,
+            page: 1,
+          },
+        });
+        if (productsRes.data.success) {
+          setProducts(productsRes.data.data.products);
+        }
       } catch (error) {
         console.error("Failed to load details:", error);
         toast.error("Failed to load details");
@@ -50,11 +77,31 @@ const RetailerDetailPage = () => {
       }
     };
 
-    fetchData();
+    if (id) {
+      fetchData();
+    }
   }, [id]);
 
   const toggleRow = (rowId) => {
     setExpandedRows((prev) => ({ ...prev, [rowId]: !prev[rowId] }));
+  };
+
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setIsDeletingProduct(true);
+    try {
+      await api.delete(`/products/${productToDelete.id}`);
+      toast.success("Product deleted successfully");
+      // Remove from local state
+      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
+    } catch (error) {
+      console.error("Failed to delete product", error);
+      toast.error("Failed to delete product");
+    } finally {
+      setIsDeletingProduct(false);
+      setDeleteProductModalOpen(false);
+      setProductToDelete(null);
+    }
   };
 
   // Define Columns
@@ -82,7 +129,15 @@ const RetailerDetailPage = () => {
       header: "Warehouse Name",
       accessor: "name",
       render: (row) => (
-        <div className="font-medium text-slate-800">{row.name}</div>
+        <button
+          onClick={(e) => {
+            e.stopPropagation();
+            navigate(`/warehouse/${row.id}`);
+          }}
+          className="font-medium text-slate-800 hover:text-bukizz-orange hover:underline text-left"
+        >
+          {row.name}
+        </button>
       ),
     },
     {
@@ -114,6 +169,102 @@ const RetailerDetailPage = () => {
             Pending
           </span>
         ),
+    },
+  ];
+
+  const productColumns = [
+    {
+      header: "Image",
+      accessor: "image",
+      render: (row) => (
+        <div className="w-10 h-10 rounded-md bg-slate-100 border border-slate-200 overflow-hidden">
+          {row.images && row.images.length > 0 ? (
+            <img
+              src={
+                (row.images.find((img) => img.isPrimary) || row.images[0]).url
+              }
+              alt={row.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-xs text-center pt-3 text-slate-400">
+              No Img
+            </div>
+          )}
+        </div>
+      ),
+    },
+    {
+      header: "Product Name",
+      accessor: "title",
+      render: (row) => (
+        <div>
+          <div className="font-medium">{row.title}</div>
+          <div className="text-xs text-slate-400 uppercase">
+            {row.productType}
+          </div>
+        </div>
+      ),
+    },
+    {
+      header: "Price",
+      accessor: "basePrice",
+      render: (row) => <span>₹{row.basePrice}</span>,
+    },
+    {
+      header: "Stock",
+      accessor: "totalStock",
+      render: (row) => {
+        // Calculate total stock if variants exist
+        const stock =
+          row.variants?.reduce((acc, curr) => acc + (curr.stock || 0), 0) || 0;
+        return (
+          <span
+            className={`text-xs px-2 py-1 rounded-full ${
+              stock > 0
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {stock > 0 ? `${stock} In Stock` : "Out of Stock"}
+          </span>
+        );
+      },
+    },
+    {
+      header: <div className="text-right">Actions</div>,
+      accessor: "actions",
+      render: (row) => (
+        <div className="flex items-center justify-end gap-2">
+          <Tooltip content="View Product">
+            <button
+              onClick={() => navigate(`/products/${row.id}`)}
+              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            >
+              <Eye size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Edit Product">
+            <button
+              onClick={() => navigate(`/products/edit/${row.id}`)}
+              className="p-1.5 text-slate-400 hover:text-bukizz-orange hover:bg-orange-50 rounded transition-colors"
+            >
+              <Edit2 size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Delete Product">
+            <button
+              onClick={() => {
+                setProductToDelete(row);
+                setDeleteProductModalOpen(true);
+              }}
+              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            >
+              <Trash2 size={16} />
+            </button>
+          </Tooltip>
+        </div>
+      ),
     },
   ];
 
@@ -230,63 +381,137 @@ const RetailerDetailPage = () => {
         </div>
       </div>
 
-      {/* Warehouses Section */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6">
-        <div className="flex items-center justify-between mb-6">
-          <div className="flex items-center gap-3">
-            <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
-              <Building size={20} />
-            </div>
-            <div>
-              <h2 className="text-lg font-semibold text-slate-800">
-                Associated Warehouses
-              </h2>
-              <p className="text-sm text-slate-500">
-                Manage supply locations for this retailer
-              </p>
-            </div>
+      {/* Tabs Area */}
+      <div>
+        <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-1">
+          {/* Tabs */}
+          <div className="flex gap-8">
+            {["warehouses", "general-products", "school-products"].map(
+              (tab) => (
+                <button
+                  key={tab}
+                  onClick={() => setActiveTab(tab)}
+                  className={`pb-3 text-sm font-medium transition-colors relative capitalize ${
+                    activeTab === tab
+                      ? "text-orange-500"
+                      : "text-slate-500 hover:text-slate-700"
+                  }`}
+                >
+                  {tab.replace("-", " ")}
+                  {activeTab === tab && (
+                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 rounded-t-full" />
+                  )}
+                </button>
+              ),
+            )}
           </div>
-          <Button size="sm" icon={Plus} onClick={() => setIsModalOpen(true)}>
-            Add Warehouse
-          </Button>
         </div>
 
-        <DataTable
-          columns={warehouseColumns}
-          data={warehouses}
-          pagination={false}
-          emptyMessage="No warehouses linked to this retailer."
-          onRowClick={(row) => toggleRow(row.id)}
-          customRowRender={(row) =>
-            expandedRows[row.id] && (
-              <tr className="bg-slate-50 border-b border-slate-200/50 animate-in fade-in">
-                <td colSpan={warehouseColumns.length + 1} className="p-4 pl-12">
-                  <div className="grid grid-cols-2 max-w-lg gap-4 text-sm">
-                    <div>
-                      <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
-                        Full Address
-                      </span>
-                      <div className="mt-1 text-slate-800">
-                        {row.address.line1}
-                        {row.address.line2 && (
-                          <>
+        {/* Content */}
+        {activeTab === "warehouses" && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-in fade-in slide-in-from-bottom-2">
+            <div className="flex items-center justify-between mb-6">
+              <div className="flex items-center gap-3">
+                <div className="p-2 bg-emerald-50 text-emerald-600 rounded-lg">
+                  <Building size={20} />
+                </div>
+                <div>
+                  <h2 className="text-lg font-semibold text-slate-800">
+                    Associated Warehouses
+                  </h2>
+                  <p className="text-sm text-slate-500">
+                    Manage supply locations for this retailer
+                  </p>
+                </div>
+              </div>
+              <Button
+                size="sm"
+                icon={Plus}
+                onClick={() => setIsModalOpen(true)}
+              >
+                Add Warehouse
+              </Button>
+            </div>
+
+            <DataTable
+              columns={warehouseColumns}
+              data={warehouses}
+              pagination={false}
+              emptyMessage="No warehouses linked to this retailer."
+              onRowClick={(row) => toggleRow(row.id)}
+              customRowRender={(row) =>
+                expandedRows[row.id] && (
+                  <tr className="bg-slate-50 border-b border-slate-200/50 animate-in fade-in">
+                    <td
+                      colSpan={warehouseColumns.length + 1}
+                      className="p-4 pl-12"
+                    >
+                      <div className="grid grid-cols-2 max-w-lg gap-4 text-sm">
+                        <div>
+                          <span className="text-xs font-bold text-slate-500 uppercase tracking-wide">
+                            Full Address
+                          </span>
+                          <div className="mt-1 text-slate-800">
+                            {row.address.line1}
+                            {row.address.line2 && (
+                              <>
+                                <br />
+                                {row.address.line2}
+                              </>
+                            )}
                             <br />
-                            {row.address.line2}
-                          </>
-                        )}
-                        <br />
-                        {row.address.city}, {row.address.state} -{" "}
-                        {row.address.postalCode || row.address.postal_code}
+                            {row.address.city}, {row.address.state} -{" "}
+                            {row.address.postalCode || row.address.postal_code}
+                          </div>
+                        </div>
                       </div>
-                    </div>
-                    {/* Map placeholder or other details could go here */}
-                  </div>
-                </td>
-              </tr>
-            )
-          }
-        />
+                    </td>
+                  </tr>
+                )
+              }
+            />
+          </div>
+        )}
+
+        {/* General Products Tab */}
+        {activeTab === "general-products" && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-in fade-in slide-in-from-bottom-2">
+            <DataTable
+              columns={productColumns}
+              data={products.filter((p) => p.productType === "general")}
+              pagination={true}
+              itemsPerPage={10}
+              emptyMessage="No general products found."
+            />
+          </div>
+        )}
+
+        {/* School Products Tab */}
+        {activeTab === "school-products" && (
+          <div className="bg-white rounded-xl shadow-sm border border-slate-200 p-6 animate-in fade-in slide-in-from-bottom-2">
+            <DataTable
+              columns={productColumns}
+              data={products.filter((p) =>
+                ["bookset", "uniform", "stationary"].includes(p.productType),
+              )}
+              pagination={true}
+              itemsPerPage={10}
+              emptyMessage="No school products found."
+            />
+          </div>
+        )}
       </div>
+
+      {/* Product Deletion Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteProductModalOpen}
+        onClose={() => setDeleteProductModalOpen(false)}
+        onConfirm={handleDeleteProduct}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${productToDelete?.title}"? This action cannot be undone.`}
+        confirmText={isDeletingProduct ? "Deleting..." : "Delete Product"}
+        isLoading={isDeletingProduct}
+      />
 
       <AddWarehouseModal
         isOpen={isModalOpen}

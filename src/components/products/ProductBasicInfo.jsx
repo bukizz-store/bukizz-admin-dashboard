@@ -190,10 +190,11 @@ const ProductBasicInfo = ({
           <>
             <AsyncSelect
               label="Category"
-              placeholder="Select Category"
+              placeholder="Select Categories"
               loadOptions={loadCategories}
               value={category}
               onChange={setCategory}
+              isMulti
             />
             <Input
               label="City Availability"

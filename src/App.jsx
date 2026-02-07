@@ -11,10 +11,12 @@ import SchoolDetailPage from "./pages/schools/SchoolDetailPage";
 import RetailersListPage from "./pages/retailers/RetailersListPage";
 import RetailerFormPage from "./pages/retailers/RetailerFormPage";
 import RetailerDetailPage from "./pages/retailers/RetailerDetailPage";
+import WarehouseDetailPage from "./pages/warehouses/WarehouseDetailPage";
 import ProductListPage from "./pages/products/ProductListPage";
 import ProductFormPage from "./pages/products/ProductFormPage";
 import RetailerApprovalsPage from "./pages/approvals/RetailerApprovalsPage";
 import ProductApprovalsPage from "./pages/approvals/ProductApprovalsPage";
+import ProductDetailPage from "./pages/products/ProductDetailPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -89,6 +91,12 @@ function App() {
                 />
                 <Route path="/retailers/:id" element={<RetailerDetailPage />} />
 
+                {/* Warehouse */}
+                <Route
+                  path="/warehouse/:id"
+                  element={<WarehouseDetailPage />}
+                />
+
                 {/* Products */}
                 <Route path="/products" element={<ProductListPage />} />
                 <Route path="/products/create" element={<ProductFormPage />} />
@@ -106,6 +114,7 @@ function App() {
                   path="/approvals/products"
                   element={<ProductApprovalsPage />}
                 />
+                <Route path="/products/:id" element={<ProductDetailPage />} />
 
                 {renderDashboardRoutes()}
                 <Route path="profile" element={<UserProfile />} />

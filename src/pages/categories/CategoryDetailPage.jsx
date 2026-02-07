@@ -9,9 +9,10 @@ import {
   ShoppingBag,
   Plus,
   Loader2,
+  Eye,
 } from "lucide-react";
 import api from "../../services/api";
-import { Button } from "../../components/ui";
+import { Button, ConfirmationModal, Tooltip } from "../../components/ui";
 import { StatusBadge, DataTable } from "../../components/common";
 import { useToast } from "../../context/ToastContext";
 
@@ -22,7 +23,15 @@ const CategoryDetailPage = () => {
 
   const [category, setCategory] = useState(null);
   const [isLoading, setIsLoading] = useState(true);
-  const [activeTab, setActiveTab] = useState("products"); // 'products' or 'subcategories'
+  const [activeTab, setActiveTab] = useState("subcategories");
+  const [products, setProducts] = useState([]);
+  const [totalProducts, setTotalProducts] = useState(0);
+  const [isProductsLoading, setIsProductsLoading] = useState(false);
+
+  // Product Deletion State
+  const [productToDelete, setProductToDelete] = useState(null);
+  const [deleteProductModalOpen, setDeleteProductModalOpen] = useState(false);
+  const [isDeletingProduct, setIsDeletingProduct] = useState(false);
 
   useEffect(() => {
     const fetchCategory = async () => {
@@ -45,6 +54,59 @@ const CategoryDetailPage = () => {
       fetchCategory();
     }
   }, [id, toast]);
+
+  useEffect(() => {
+    // Fetch products when activeTab is 'products' and we have the category loaded
+    if (category?.slug) {
+      const fetchProducts = async () => {
+        setIsProductsLoading(true);
+        try {
+          const params = {
+            page: 1,
+            limit: 10,
+          };
+          // Route: /products/category/:slug
+          const response = await api.get(
+            `/products/category/${category.slug}`,
+            { params },
+          );
+          if (response.data.success) {
+            setProducts(response.data.data.products);
+            // Update total count from pagination metadata
+            if (response.data.data.pagination) {
+              setTotalProducts(response.data.data.pagination.total || 0);
+            }
+          }
+        } catch (error) {
+          console.error("Failed to fetch products", error);
+          toast.error("Failed to load products");
+        } finally {
+          setIsProductsLoading(false);
+        }
+      };
+
+      fetchProducts();
+    }
+  }, [category]);
+
+  const handleDeleteProduct = async () => {
+    if (!productToDelete) return;
+    setIsDeletingProduct(true);
+    try {
+      await api.delete(`/products/${productToDelete.id}`);
+      toast.success("Product deleted successfully");
+      // Remove from local state
+      setProducts((prev) => prev.filter((p) => p.id !== productToDelete.id));
+      setTotalProducts((prev) => Math.max(0, prev - 1));
+    } catch (error) {
+      console.error("Failed to delete product", error);
+      toast.error("Failed to delete product");
+    } finally {
+      setIsDeletingProduct(false);
+      setDeleteProductModalOpen(false);
+      setProductToDelete(null);
+    }
+  };
 
   const handleDelete = async () => {
     if (
@@ -176,47 +238,94 @@ const CategoryDetailPage = () => {
     </button>
   );
 
-  // Dummy Product Columns
+  // Product Columns
   const productColumns = [
     {
       header: "Image",
       accessor: "image",
       render: (row) => (
-        <div className="w-10 h-10 rounded-md bg-slate-100 border border-slate-200" />
+        <div className="w-10 h-10 rounded-md bg-slate-100 border border-slate-200 overflow-hidden">
+          {row.images && row.images.length > 0 ? (
+            <img
+              src={
+                (row.images.find((img) => img.isPrimary) || row.images[0]).url
+              }
+              alt={row.title}
+              className="w-full h-full object-cover"
+            />
+          ) : (
+            <div className="text-xs text-center pt-3 text-slate-400">
+              No Img
+            </div>
+          )}
+        </div>
       ),
     },
     {
       header: "Product Name",
-      accessor: "name",
-      render: (row) => <span className="font-medium">{row.name}</span>,
+      accessor: "title",
+      render: (row) => <span className="font-medium">{row.title}</span>,
     },
     {
       header: "Price",
-      accessor: "price",
-      render: (row) => <span>₹{row.price}</span>,
+      accessor: "basePrice",
+      render: (row) => <span>₹{row.basePrice}</span>,
     },
     {
       header: "Stock",
-      accessor: "stock",
+      accessor: "totalStock",
+      render: (row) => {
+        // Calculate total stock if variants exist
+        const stock =
+          row.variants?.reduce((acc, curr) => acc + (curr.stock || 0), 0) || 0;
+        return (
+          <span
+            className={`text-xs px-2 py-1 rounded-full ${
+              stock > 0
+                ? "bg-green-100 text-green-700"
+                : "bg-red-100 text-red-700"
+            }`}
+          >
+            {stock > 0 ? `${stock} In Stock` : "Out of Stock"}
+          </span>
+        );
+      },
+    },
+    {
+      header: <div className="text-right">Actions</div>,
+      accessor: "actions",
       render: (row) => (
-        <span
-          className={`text-xs px-2 py-1 rounded-full ${
-            row.stock > 0
-              ? "bg-green-100 text-green-700"
-              : "bg-red-100 text-red-700"
-          }`}
-        >
-          {row.stock > 0 ? "In Stock" : "Out of Stock"}
-        </span>
+        <div className="flex items-center justify-end gap-2">
+          <Tooltip content="View Product">
+            <button
+              onClick={() => navigate(`/products/${row.id}`)}
+              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
+            >
+              <Eye size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Edit Product">
+            <button
+              onClick={() => navigate(`/products/edit/${row.id}`)}
+              className="p-1.5 text-slate-400 hover:text-bukizz-orange hover:bg-orange-50 rounded transition-colors"
+            >
+              <Edit2 size={16} />
+            </button>
+          </Tooltip>
+          <Tooltip content="Delete Product">
+            <button
+              onClick={() => {
+                setProductToDelete(row);
+                setDeleteProductModalOpen(true);
+              }}
+              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+            >
+              <Trash2 size={16} />
+            </button>
+          </Tooltip>
+        </div>
       ),
     },
-  ];
-
-  // Dummy Products Data
-  const dummyProducts = [
-    { id: 1, name: "Sample Product A", price: 499, stock: 120 },
-    { id: 2, name: "Sample Product B", price: 899, stock: 0 },
-    { id: 3, name: "Sample Product C", price: 1299, stock: 45 },
   ];
 
   return (
@@ -313,7 +422,9 @@ const CategoryDetailPage = () => {
                     Products
                   </span>
                 </div>
-                <div className="text-xl font-bold text-slate-700">0</div>
+                <div className="text-xl font-bold text-slate-700">
+                  {totalProducts}
+                </div>
               </div>
               <div className="bg-slate-50 p-4 rounded-lg border border-slate-100">
                 <div className="flex items-center gap-2 text-slate-400 mb-1">
@@ -337,19 +448,6 @@ const CategoryDetailPage = () => {
           {/* Tabs */}
           <div className="flex gap-8">
             <button
-              onClick={() => setActiveTab("products")}
-              className={`pb-3 text-sm font-medium transition-colors relative ${
-                activeTab === "products"
-                  ? "text-orange-500"
-                  : "text-slate-500 hover:text-slate-700"
-              }`}
-            >
-              Products
-              {activeTab === "products" && (
-                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 rounded-t-full" />
-              )}
-            </button>
-            <button
               onClick={() => setActiveTab("subcategories")}
               className={`pb-3 text-sm font-medium transition-colors relative ${
                 activeTab === "subcategories"
@@ -362,12 +460,25 @@ const CategoryDetailPage = () => {
                 <span className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 rounded-t-full" />
               )}
             </button>
+            <button
+              onClick={() => setActiveTab("products")}
+              className={`pb-3 text-sm font-medium transition-colors relative ${
+                activeTab === "products"
+                  ? "text-orange-500"
+                  : "text-slate-500 hover:text-slate-700"
+              }`}
+            >
+              Products
+              {activeTab === "products" && (
+                <span className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 rounded-t-full" />
+              )}
+            </button>
           </div>
 
           {/* Tab Actions */}
           <div>
             {activeTab === "products" ? (
-              <Button size="sm" disabled>
+              <Button size="sm" onClick={() => navigate("/products/create")}>
                 <Plus size={16} className="mr-2" /> Add Product
               </Button>
             ) : (
@@ -383,13 +494,7 @@ const CategoryDetailPage = () => {
 
         {/* Tab Content */}
         <div className="bg-white rounded-lg shadow-sm min-h-[300px]">
-          {activeTab === "products" ? (
-            <DataTable
-              columns={productColumns}
-              data={dummyProducts} // Use dummy data for now
-              pagination={false}
-            />
-          ) : (
+          {activeTab === "subcategories" ? (
             <DataTable
               columns={subCategoryColumns}
               data={category.children || []}
@@ -398,9 +503,35 @@ const CategoryDetailPage = () => {
               pagination={false}
               emptyMessage="No sub-categories found."
             />
+          ) : (
+            <React.Fragment>
+              {isProductsLoading ? (
+                <div className="flex justify-center items-center h-48">
+                  <Loader2 className="animate-spin text-orange-500" />
+                </div>
+              ) : (
+                <DataTable
+                  columns={productColumns}
+                  data={products}
+                  pagination={true}
+                  emptyMessage="No products found in this category."
+                />
+              )}
+            </React.Fragment>
           )}
         </div>
       </div>
+
+      {/* Product Deletion Confirmation Modal */}
+      <ConfirmationModal
+        isOpen={deleteProductModalOpen}
+        onClose={() => setDeleteProductModalOpen(false)}
+        onConfirm={handleDeleteProduct}
+        title="Delete Product"
+        message={`Are you sure you want to delete "${productToDelete?.title}"? This action cannot be undone.`}
+        confirmText={isDeletingProduct ? "Deleting..." : "Delete Product"}
+        isLoading={isDeletingProduct}
+      />
     </div>
   );
 };

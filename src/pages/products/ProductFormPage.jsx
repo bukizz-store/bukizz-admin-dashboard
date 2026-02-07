@@ -33,7 +33,7 @@ const ProductFormPage = () => {
   });
 
   // Context Specific
-  const [category, setCategory] = useState(null);
+  const [category, setCategory] = useState([]);
   const [school, setSchool] = useState(null);
   const [grade, setGrade] = useState("");
   const [isMandatory, setIsMandatory] = useState(false);
@@ -49,6 +49,224 @@ const ProductFormPage = () => {
 
   // Section D: Product Highlights (Key-Value pairs)
   const [highlights, setHighlights] = useState([{ key: "", value: "" }]);
+
+  // --- Fetch Data for Editing ---
+  useEffect(() => {
+    if (!id) return;
+
+    const fetchProduct = async () => {
+      try {
+        const response = await api.get(`/products/${id}`);
+        if (response.data?.success) {
+          const product = response.data.data.product;
+          console.log("Fetched Product:", product);
+
+          // 1. Basic Info
+          setFormData({
+            title: product.title,
+            sku: product.sku,
+            basePrice: product.base_price,
+            shortDescription: product.short_description || "",
+            fullDescription: product.description || "", // Ensure description flows into RTE
+            city: product.city,
+            brand: product.product_brands?.[0]?.brands
+              ? {
+                  id: product.product_brands[0].brands.id,
+                  label: product.product_brands[0].brands.name,
+                }
+              : null,
+            warehouse: product.products_warehouse?.warehouse
+              ? {
+                  id: product.products_warehouse.warehouse.id,
+                  label: product.products_warehouse.warehouse.name,
+                }
+              : null,
+          });
+
+          // 2. Type & Context
+          const pType = product.product_type;
+          setProductType(pType === "general" ? "general" : "school");
+
+          if (pType !== "general") {
+            setSchoolProductType(pType);
+          }
+
+          // Categories
+          if (
+            product.product_categories &&
+            product.product_categories.length > 0
+          ) {
+            const cats = product.product_categories
+              .map((pc) => pc.categories)
+              .filter(Boolean)
+              .map((c) => ({
+                id: c.id,
+                label: c.name,
+              }));
+            setCategory(cats);
+          }
+
+          // School Data
+          if (product.school) {
+            setSchool({ id: product.school.id, label: product.school.name });
+            const sData = product.schoolData || {};
+            setGrade(sData.grade || "");
+            setIsMandatory(sData.mandatory || false);
+          } else if (product.products_school?.school) {
+            setSchool({
+              id: product.products_school.school.id,
+              label: product.products_school.school.name,
+            });
+            setGrade(product.products_school.grade || "");
+            setIsMandatory(product.products_school.mandatory || false);
+          }
+
+          // 3. Retailer (Fetch via Warehouse)
+          if (product.products_warehouse?.warehouse?.id) {
+            try {
+              const whId = product.products_warehouse.warehouse.id;
+              const whRes = await api.get(`/warehouses/${whId}`);
+              if (whRes.data?.success) {
+                const whData = whRes.data.data.warehouse || whRes.data.data; // Handle potential wrapper
+                if (whData.retailer) {
+                  setRetailer({
+                    id: whData.retailer.id,
+                    label:
+                      whData.retailer.full_name ||
+                      whData.retailer.email ||
+                      "Retailer",
+                  });
+                }
+              }
+            } catch (whErr) {
+              console.error("Failed to fetch retailer for product:", whErr);
+            }
+          } else if (product.retailer) {
+            setRetailer({
+              id: product.retailer.id,
+              label:
+                product.retailer.full_name ||
+                product.retailer.email ||
+                "Retailer",
+            });
+          }
+
+          // 4. Highlights
+          if (product.highlight) {
+            const highlightArray = Object.entries(product.highlight).map(
+              ([key, value]) => ({
+                key,
+                value,
+              }),
+            );
+            setHighlights(
+              highlightArray.length > 0
+                ? highlightArray
+                : [{ key: "", value: "" }],
+            );
+          }
+
+          // 5. Product Options (Reconstruct from Variants)
+          if (product.variants && product.variants.length > 0) {
+            const reconstructedOptions = [];
+
+            // Helper to process options at positions 1, 2, 3
+            const processOptionPosition = (pos) => {
+              const refKey = `option_value_${pos}_ref`;
+
+              // Find the first variant that has this option defined to get the name
+              const referenceVariant = product.variants.find((v) => v[refKey]);
+              if (!referenceVariant) return;
+
+              const attributeName = referenceVariant[refKey].attribute_name;
+              const uniqueValuesMap = new Map(); // value -> { value, imageUrl }
+
+              product.variants.forEach((variant) => {
+                const ref = variant[refKey];
+                if (ref && ref.value) {
+                  // Only add if not already present
+                  if (!uniqueValuesMap.has(ref.value)) {
+                    uniqueValuesMap.set(ref.value, {
+                      value: ref.value,
+                      imageUrl: ref.imageUrl || null,
+                    });
+                  }
+                }
+              });
+
+              // Check if ANY value has an image URL
+              const hasImages = Array.from(uniqueValuesMap.values()).some(
+                (v) => v.imageUrl,
+              );
+
+              reconstructedOptions.push({
+                id: Date.now() + pos,
+                name: attributeName,
+                position: pos,
+                hasImages: hasImages,
+                values: Array.from(uniqueValuesMap.values()).map((v) =>
+                  hasImages ? { value: v.value, image: v.imageUrl } : v.value,
+                ),
+              });
+            };
+
+            processOptionPosition(1);
+            processOptionPosition(2);
+            processOptionPosition(3);
+
+            setProductOptions(reconstructedOptions);
+          }
+
+          // 6. Variants
+          if (product.variants) {
+            setVariants(
+              product.variants.map((v) => ({
+                id: v.id,
+                name: [
+                  v.option_value_1_ref?.value,
+                  v.option_value_2_ref?.value,
+                  v.option_value_3_ref?.value,
+                ]
+                  .filter(Boolean)
+                  .join(" / "),
+                sku: v.sku,
+                price: v.variant_price || v.price,
+                stock: v.stock,
+                options: {
+                  [v.option_value_1_ref?.attribute_name]:
+                    v.option_value_1_ref?.value,
+                  [v.option_value_2_ref?.attribute_name]:
+                    v.option_value_2_ref?.value,
+                  [v.option_value_3_ref?.attribute_name]:
+                    v.option_value_3_ref?.value,
+                }, // Re-map for local state usage
+              })),
+            );
+          }
+
+          // 7. Images
+          if (product.images && product.images.length > 0) {
+            // Sort by sortOrder if available
+            const sortedImages = [...product.images].sort(
+              (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
+            );
+            setImages(sortedImages.map((img) => img.url));
+          } else if (product.mainImages && product.mainImages.length > 0) {
+            const sortedImages = [...product.mainImages].sort(
+              (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
+            );
+            setImages(sortedImages.map((img) => img.url));
+          }
+        }
+      } catch (error) {
+        console.error("Failed to fetch product:", error);
+        toast.error("Failed to fetch product details");
+        navigate("/products");
+      }
+    };
+
+    fetchProduct();
+  }, [id, navigate, toast]);
 
   // --- Helpers ---
 
@@ -274,18 +492,26 @@ const ProductFormPage = () => {
 
   // --- Submission Handler ---
 
+  // --- Submission Handler ---
+
   const handleSubmit = async () => {
     // 1. Validation
     if (!formData.title) return toast.error("Product name is required");
     if (!formData.basePrice) return toast.error("Base price is required");
     if (!formData.city) return toast.error("City is required");
-    if (!retailer) return toast.error("Retailer is required");
+    // Retailer and Warehouse are required
+    if (!retailer)
+      return toast.error(
+        "Retailer is required. Ensure warehouse has a linked retailer.",
+      );
     if (!formData.warehouse) return toast.error("Warehouse is required");
 
     if (productType === "school" && !school)
       return toast.error("School is required for school products");
-    if (productType === "general" && !category)
-      return toast.error("Category is required for general products");
+    if (productType === "general" && (!category || category.length === 0))
+      return toast.error(
+        "At least one category is required for general products",
+      );
 
     setIsSaving(true);
     try {
@@ -309,52 +535,122 @@ const ProductFormPage = () => {
               throw new Error(`Failed to upload image: ${img.name}`);
             }
           }
-          return null; // Should not happen if correctly filtered
+          return null;
         }),
       );
 
-      // Filter out failed uploads if any return null/empty (though we throw error above)
+      // Filter out failed uploads
       const validImageUrls = uploadedImageUrls.filter((url) => url);
 
       // 2. Transform highlights to object
-      console.log("highlights", highlights);
       const highlightsObject = highlights.reduce((acc, curr) => {
         if (curr.key.trim() && curr.value.trim()) {
           acc[curr.key.trim()] = curr.value.trim();
         }
         return acc;
       }, {});
-      console.log("highlightsObject", highlightsObject);
 
       // 2.5 Payload Construction
       const payload = {
+        // --- SECTION 1: FLAGS ---
+        replaceVariants: false,
+        replaceImages: false,
+
         retailerId: retailer.id,
+
+        // --- SECTION 2: BASIC DATA ---
         productData: {
           title: formData.title,
           sku: formData.sku,
-          // For school products, send the specific type (bookset/uniform/stationary)
           productType: productType === "school" ? schoolProductType : "general",
           basePrice: Number(formData.basePrice),
           shortDescription: formData.shortDescription,
-          description: formData.fullDescription, // Mapped from fullDescription
+          description: formData.fullDescription,
           city: formData.city,
           currency: "INR",
           highlight: { ...highlightsObject },
+          isActive: true, // Default to true or add toggle
         },
-        brandData: formData.brand
-          ? {
-              type: "existing",
-              brandId: formData.brand.id,
+
+        // --- SECTION 3: PRODUCT OPTIONS ---
+        productOptions: productOptions.map((opt, idx) => ({
+          name: opt.name,
+          values: opt.values.map((val) => {
+            if (typeof val === "string") {
+              return { value: val, imageUrl: null }; // New value without image
             }
-          : null,
+            // Handle { value, image }
+            return { value: val.value, imageUrl: val.image || null };
+          }),
+          position: idx + 1,
+          isRequired: true,
+          // Add ID if it exists and isn't a temp one (temp ones usually numeric timestamp)
+          // If we tracked IDs in state, we would pass them here. For now, backend handles creation/matching.
+        })),
+
+        // --- SECTION 4: VARIANTS ---
+        variants: variants.map((v) => {
+          // We need to map the flat option values back to the structure expected by backend if needed,
+          // OR just send SKU/Price/Stock/Metadata if backend handles option mapping from options array.
+          // The user request example shows:
+          /*
+            "variants": [
+                {
+                "id": "uuid-variant-1",
+                "sku": "TSHIRT-RED-S",
+                "price": 1200,
+                "stock": 50,
+                }
+            ]
+           */
+          // It seems we should include ID if we have it to update existing.
+
+          return {
+            id: v.id && !v.id.toString().startsWith("var_") ? v.id : undefined, // Send ID only if it's a real UUID
+            sku: v.sku,
+            price: Number(v.price),
+            stock: Number(v.stock),
+            // The user example didn't explicitly show metadata in the payload structure but it might be needed for mapping
+            // However, the backend likely reconstructs it from the productOptions order + cartesian product logic if we don't provide explicit links.
+            // But to be safe and consistent with previous logic, we can send options as metadata or implicit order.
+            // BUT the specific request said: "product option and its values - recompile from the variants you are getting" implies READ side.
+            // On WRITE side: "Use this to update attributes like 'Color', 'Size'..."
+            // Let's stick to the example payload structure.
+          };
+        }),
+
+        // --- SECTION 5: IMAGES ---
+        images: validImageUrls.map((url, idx) => ({
+          url: url,
+          altText: formData.title,
+          sortOrder: idx,
+          isPrimary: idx === 0,
+          // variantId: ... if we supported per-variant images in UI
+        })),
+
+        // --- SECTION 6: WAREHOUSE ---
         warehouseData: formData.warehouse
           ? {
               type: "existing",
               warehouseId: formData.warehouse.id,
             }
           : null,
+
+        // --- SECTION 7: BRAND ---
+        brandData: formData.brand
+          ? {
+              type: "existing",
+              brandId: formData.brand.id,
+            }
+          : null,
+
+        // --- SECTION 8: CATEGORIES ---
         categories:
-          productType === "general" && category ? [{ id: category.id }] : [],
+          productType === "general" && category.length > 0
+            ? category.map((c) => ({ id: c.id }))
+            : [],
+
+        // --- SCHOOL DATA ---
         schoolData:
           productType === "school" && school
             ? {
@@ -363,43 +659,6 @@ const ProductFormPage = () => {
                 mandatory: isMandatory,
               }
             : null,
-        productOptions: productOptions.map((opt, idx) => ({
-          name: opt.name,
-          values: opt.values.map((val) => {
-            if (typeof val === "string") {
-              return { value: val, imageUrl: null };
-            }
-            // Handle existing object { value, image }
-            return { value: val.value, imageUrl: val.image || null };
-          }),
-          position: idx + 1,
-          isRequired: true,
-        })),
-        variants: variants.map((v) => {
-          const optionsPayload = {};
-          // Map variants to option1, option2, option3 based on productOptions order
-          if (productOptions[0])
-            optionsPayload.option1 = v.options[productOptions[0].name];
-          if (productOptions[1])
-            optionsPayload.option2 = v.options[productOptions[1].name];
-          if (productOptions[2])
-            optionsPayload.option3 = v.options[productOptions[2].name];
-
-          return {
-            sku: v.sku,
-            price: Number(v.price),
-            stock: Number(v.stock),
-            ...optionsPayload,
-            metadata: { ...v.options },
-          };
-        }),
-        images: validImageUrls.map((url, idx) => ({
-          url: url,
-          altText: formData.title,
-          sortOrder: idx,
-          isPrimary: idx === 0,
-          variantId: null,
-        })),
       };
 
       console.log("Submitting Payload:", payload);
