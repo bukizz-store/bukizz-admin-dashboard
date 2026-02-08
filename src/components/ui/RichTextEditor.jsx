@@ -729,6 +729,85 @@ const MenuBar = ({
 };
 
 /**
+ * Helper function to wrap HTML content with embedded CSS styles
+ * This ensures proper rendering on external platforms (mobile apps, websites, etc.)
+ */
+const wrapHtmlWithStyles = (html) => {
+  // Embedded CSS for rich text elements
+  const embeddedStyles = `<style>
+/* Image Grid Styles */
+[data-image-grid] {
+  margin: 1rem 0;
+}
+[data-image-grid] > div {
+  position: relative;
+  overflow: hidden;
+  border-radius: 8px;
+  aspect-ratio: 1;
+}
+[data-image-grid] img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+  display: block;
+}
+
+/* Table Styles */
+table {
+  border-collapse: collapse;
+  width: 100%;
+  margin: 1rem 0;
+  border: 1px solid #e2e8f0;
+}
+th, td {
+  border: 1px solid #e2e8f0;
+  padding: 8px 12px;
+  text-align: left;
+  min-width: 100px;
+}
+th {
+  background-color: #f8fafc;
+  font-weight: 600;
+  color: #334155;
+}
+td {
+  background-color: #ffffff;
+}
+tr:nth-child(even) td {
+  background-color: #f8fafc;
+}
+
+/* Resizable Image Styles */
+img[width] {
+  max-width: 100%;
+  height: auto;
+}
+
+/* General Typography */
+h1 { font-size: 2rem; font-weight: 700; margin: 1rem 0; }
+h2 { font-size: 1.5rem; font-weight: 600; margin: 0.75rem 0; }
+p { margin: 0.5rem 0; line-height: 1.6; }
+ul, ol { margin: 0.5rem 0; padding-left: 1.5rem; }
+li { margin: 0.25rem 0; }
+a { color: #2563eb; text-decoration: underline; }
+strong { font-weight: 600; }
+em { font-style: italic; }
+u { text-decoration: underline; }
+</style>`;
+
+  // Only add styles if HTML contains content that needs it
+  if (
+    html.includes("data-image-grid") ||
+    html.includes("<table") ||
+    html.includes("<img")
+  ) {
+    return embeddedStyles + html;
+  }
+
+  return html;
+};
+
+/**
  * RichTextEditor Component
  */
 const RichTextEditor = ({
@@ -774,8 +853,14 @@ const RichTextEditor = ({
     ],
     content: value,
     onUpdate: ({ editor }) => {
-      // Return HTML or plain text based on returnHtml prop
-      const content = returnHtml ? editor.getHTML() : editor.getText();
+      // Return HTML with embedded styles or plain text based on returnHtml prop
+      let content;
+      if (returnHtml) {
+        const rawHtml = editor.getHTML();
+        content = wrapHtmlWithStyles(rawHtml);
+      } else {
+        content = editor.getText();
+      }
       console.log("Content:", content);
       onChange(content);
     },

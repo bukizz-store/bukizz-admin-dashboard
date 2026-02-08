@@ -9,6 +9,7 @@ import ProductBasicInfo from "../../components/products/ProductBasicInfo";
 import ProductVariants from "../../components/products/ProductVariants";
 import ProductMedia from "../../components/products/ProductMedia";
 import KeyValueManager from "../../components/products/KeyValueManager";
+import MetadataForm from "../../components/products/MetadataForm";
 
 const ProductFormPage = () => {
   const navigate = useNavigate();
@@ -50,6 +51,10 @@ const ProductFormPage = () => {
 
   // Section D: Product Highlights (Key-Value pairs)
   const [highlights, setHighlights] = useState([{ key: "", value: "" }]);
+
+  // Section E: Category Attributes (Dynamic metadata)
+  const [categoryAttributes, setCategoryAttributes] = useState([]);
+  const [metadata, setMetadata] = useState({});
 
   // --- Fetch Data for Editing ---
   useEffect(() => {
@@ -270,6 +275,35 @@ const ProductFormPage = () => {
 
     fetchProduct();
   }, [id, navigate, toast]);
+
+  // --- Fetch Category Attributes when category changes ---
+  useEffect(() => {
+    const fetchCategoryAttributes = async () => {
+      if (!category || category.length === 0) {
+        setCategoryAttributes([]);
+        return;
+      }
+
+      try {
+        // Fetch the first category's productAttributes
+        const categoryId = category[0]?.id;
+        if (!categoryId) return;
+
+        const response = await api.get(`/categories/${categoryId}`);
+        if (response.data?.success) {
+          const catData = response.data.data.category || response.data.data;
+          const attrs =
+            catData.productAttributes || catData.product_attributes || [];
+          setCategoryAttributes(attrs);
+        }
+      } catch (error) {
+        console.error("Failed to fetch category attributes:", error);
+        setCategoryAttributes([]);
+      }
+    };
+
+    fetchCategoryAttributes();
+  }, [category]);
 
   // --- Helpers ---
 
@@ -561,7 +595,23 @@ const ProductFormPage = () => {
         return acc;
       }, {});
 
-      // 2.5 Payload Construction
+      // 2.5 Calculate compare_price from variant with highest discount
+      let comparePriceFromVariant = 0;
+      if (variants.length > 0) {
+        let maxDiscount = 0;
+        variants.forEach((v) => {
+          const compareAt = Number(v.compareAtPrice) || 0;
+          const price = Number(v.price) || 0;
+          const discount =
+            compareAt > 0 ? ((compareAt - price) / compareAt) * 100 : 0;
+          if (discount > maxDiscount) {
+            maxDiscount = discount;
+            comparePriceFromVariant = compareAt;
+          }
+        });
+      }
+
+      // 2.6 Payload Construction
       console.log("old product Options : ", productOptions);
       const payload = {
         // --- SECTION 1: FLAGS ---
@@ -582,6 +632,10 @@ const ProductFormPage = () => {
           city: formData.city,
           currency: "INR",
           highlight: { ...highlightsObject },
+          metadata: {
+            categoryAttributes: { ...metadata },
+            compare_price: comparePriceFromVariant, // compareAtPrice of highest discount variant
+          },
           isActive: true, // Default to true or add toggle
         },
 
@@ -730,6 +784,15 @@ const ProductFormPage = () => {
             setSchoolProductType={setSchoolProductType}
             loaders={{ loadBrands, loadCategories, loadSchools }}
           />
+
+          {/* Dynamic Category Attributes */}
+          {categoryAttributes.length > 0 && (
+            <MetadataForm
+              attributes={categoryAttributes}
+              value={metadata}
+              onChange={setMetadata}
+            />
+          )}
 
           {/* Product Highlights Section */}
           <KeyValueManager
