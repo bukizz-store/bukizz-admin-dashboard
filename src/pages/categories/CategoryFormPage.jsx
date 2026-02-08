@@ -12,6 +12,7 @@ import {
   ImageUpload,
   Button,
 } from "../../components/ui";
+import { AttributeArchitect } from "../../components/categories";
 import api from "../../services/api";
 
 const CategoryFormPage = () => {
@@ -30,6 +31,7 @@ const CategoryFormPage = () => {
   });
   const [imageFile, setImageFile] = useState(null);
   const [initialImagePreview, setInitialImagePreview] = useState(null);
+  const [attributes, setAttributes] = useState([]);
 
   // Slug generation utility
   const generateSlug = (text) => {
@@ -71,6 +73,11 @@ const CategoryFormPage = () => {
             parentId: data.parentId || null,
           });
 
+          // Load existing attributes if available
+          if (data.productAttributes && Array.isArray(data.productAttributes)) {
+            setAttributes(data.productAttributes);
+          }
+
           if (data.image) {
             setInitialImagePreview(data.image);
           }
@@ -91,6 +98,7 @@ const CategoryFormPage = () => {
       submitData.append("name", formData.name);
       submitData.append("slug", formData.slug);
       submitData.append("description", formData.description);
+      submitData.append("productAttributes", JSON.stringify(attributes));
       if (formData.parentId) {
         submitData.append("parentId", formData.parentId);
       }
@@ -202,6 +210,9 @@ const CategoryFormPage = () => {
             />
           </div>
         </div>
+
+        {/* Section C: Product Attributes */}
+        <AttributeArchitect value={attributes} onChange={setAttributes} />
       </div>
 
       {/* Footer Actions */}
