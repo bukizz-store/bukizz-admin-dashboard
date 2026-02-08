@@ -339,6 +339,12 @@ const ProductVariants = ({
                   SKU
                 </th>
                 <th className="py-2 px-3 font-medium text-slate-600 w-32">
+                  Compare At (₹)
+                </th>
+                <th className="py-2 px-3 font-medium text-slate-600 w-24">
+                  % Discount
+                </th>
+                <th className="py-2 px-3 font-medium text-slate-600 w-32">
                   Price (₹)
                 </th>
                 <th className="py-2 px-3 font-medium text-slate-600 w-24">
@@ -347,46 +353,100 @@ const ProductVariants = ({
               </tr>
             </thead>
             <tbody className="divide-y divide-slate-100">
-              {variants.map((variant, idx) => (
-                <tr key={idx} className="hover:bg-slate-50/50">
-                  <td className="py-2 px-3 text-slate-900 font-medium">
-                    {variant.name}
-                  </td>
-                  <td className="py-2 px-3">
-                    <input
-                      type="text"
-                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:border-bukizz-orange focus:outline-none"
-                      value={variant.sku}
-                      onChange={(e) =>
-                        handleVariantChange(idx, "sku", e.target.value)
-                      }
-                    />
-                  </td>
-                  <td className="py-2 px-3">
-                    <input
-                      type="number"
-                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:border-bukizz-orange focus:outline-none"
-                      value={variant.price}
-                      onChange={(e) =>
-                        handleVariantChange(idx, "price", e.target.value)
-                      }
-                    />
-                  </td>
-                  <td className="py-2 px-3">
-                    <input
-                      type="number"
-                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:border-bukizz-orange focus:outline-none"
-                      value={variant.stock}
-                      onChange={(e) =>
-                        handleVariantChange(idx, "stock", e.target.value)
-                      }
-                    />
-                  </td>
-                </tr>
-              ))}
+              {variants.map((variant, idx) => {
+                // Calculate discount percentage
+                const compareAt = Number(variant.compareAtPrice) || 0;
+                const price = Number(variant.price) || 0;
+                const discount =
+                  compareAt > 0
+                    ? Math.round(((compareAt - price) / compareAt) * 100)
+                    : 0;
+
+                // Handle discount change - calculate new price based on compareAtPrice
+                const handleDiscountChange = (newDiscount) => {
+                  const discountVal = Number(newDiscount) || 0;
+                  if (compareAt > 0 && discountVal >= 0 && discountVal <= 100) {
+                    const newPrice = Math.round(
+                      compareAt * (1 - discountVal / 100),
+                    );
+                    handleVariantChange(idx, "price", newPrice);
+                  }
+                };
+
+                return (
+                  <tr key={idx} className="hover:bg-slate-50/50">
+                    <td className="py-2 px-3 text-slate-900 font-medium">
+                      {variant.name}
+                    </td>
+                    <td className="py-2 px-3">
+                      <input
+                        type="text"
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:border-bukizz-orange focus:outline-none"
+                        value={variant.sku}
+                        onChange={(e) =>
+                          handleVariantChange(idx, "sku", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="py-2 px-3">
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:border-bukizz-orange focus:outline-none"
+                        value={variant.compareAtPrice}
+                        onChange={(e) =>
+                          handleVariantChange(
+                            idx,
+                            "compareAtPrice",
+                            e.target.value,
+                          )
+                        }
+                      />
+                    </td>
+                    <td className="py-2 px-3">
+                      <div className="relative">
+                        <input
+                          type="number"
+                          min="0"
+                          max="100"
+                          className={`w-full px-2 py-1 text-xs border rounded focus:border-bukizz-orange focus:outline-none ${
+                            discount > 0
+                              ? "border-green-300 bg-green-50 text-green-700"
+                              : "border-slate-200"
+                          }`}
+                          value={discount}
+                          onChange={(e) => handleDiscountChange(e.target.value)}
+                        />
+                        <span className="absolute right-2 top-1/2 -translate-y-1/2 text-xs text-slate-400">
+                          %
+                        </span>
+                      </div>
+                    </td>
+                    <td className="py-2 px-3">
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:border-bukizz-orange focus:outline-none"
+                        value={variant.price}
+                        onChange={(e) =>
+                          handleVariantChange(idx, "price", e.target.value)
+                        }
+                      />
+                    </td>
+                    <td className="py-2 px-3">
+                      <input
+                        type="number"
+                        className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:border-bukizz-orange focus:outline-none"
+                        value={variant.stock}
+                        onChange={(e) =>
+                          handleVariantChange(idx, "stock", e.target.value)
+                        }
+                      />
+                    </td>
+                  </tr>
+                );
+              })}
               {variants.length === 0 && (
                 <tr>
-                  <td colSpan="4" className="py-8 text-center text-slate-400">
+                  <td colSpan="6" className="py-8 text-center text-slate-400">
                     Add options to generate variants
                   </td>
                 </tr>

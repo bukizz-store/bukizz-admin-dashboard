@@ -9,6 +9,7 @@ import ProductBasicInfo from "../../components/products/ProductBasicInfo";
 import ProductVariants from "../../components/products/ProductVariants";
 import ProductMedia from "../../components/products/ProductMedia";
 import KeyValueManager from "../../components/products/KeyValueManager";
+import MetadataForm from "../../components/products/MetadataForm";
 
 const ProductFormPage = () => {
   const navigate = useNavigate();
@@ -30,6 +31,7 @@ const ProductFormPage = () => {
     shortDescription: "",
     fullDescription: "",
     basePrice: "",
+    compareAtPrice: "", // Added compareAtPrice
   });
 
   // Context Specific
@@ -50,6 +52,10 @@ const ProductFormPage = () => {
   // Section D: Product Highlights (Key-Value pairs)
   const [highlights, setHighlights] = useState([{ key: "", value: "" }]);
 
+  // Section E: Category Attributes (Dynamic metadata)
+  const [categoryAttributes, setCategoryAttributes] = useState([]);
+  const [metadata, setMetadata] = useState({});
+
   // --- Fetch Data for Editing ---
   useEffect(() => {
     if (!id) return;
@@ -66,6 +72,7 @@ const ProductFormPage = () => {
             title: product.title,
             sku: product.sku,
             basePrice: product.base_price,
+            compareAtPrice: product.compare_at_price || "", // Populate compareAtPrice
             shortDescription: product.short_description || "",
             fullDescription: product.description || "", // Ensure description flows into RTE
             city: product.city,
@@ -231,6 +238,7 @@ const ProductFormPage = () => {
                   .join(" / "),
                 sku: v.sku,
                 price: v.variant_price || v.price,
+                compareAtPrice: v.compare_at_price, // Populate variant compareAtPrice
                 stock: v.stock,
                 options: {
                   [v.option_value_1_ref?.attribute_name]:
@@ -267,6 +275,35 @@ const ProductFormPage = () => {
 
     fetchProduct();
   }, [id, navigate, toast]);
+
+  // --- Fetch Category Attributes when category changes ---
+  useEffect(() => {
+    const fetchCategoryAttributes = async () => {
+      if (!category || category.length === 0) {
+        setCategoryAttributes([]);
+        return;
+      }
+
+      try {
+        // Fetch the first category's productAttributes
+        const categoryId = category[0]?.id;
+        if (!categoryId) return;
+
+        const response = await api.get(`/categories/${categoryId}`);
+        if (response.data?.success) {
+          const catData = response.data.data.category || response.data.data;
+          const attrs =
+            catData.productAttributes || catData.product_attributes || [];
+          setCategoryAttributes(attrs);
+        }
+      } catch (error) {
+        console.error("Failed to fetch category attributes:", error);
+        setCategoryAttributes([]);
+      }
+    };
+
+    fetchCategoryAttributes();
+  }, [category]);
 
   // --- Helpers ---
 
@@ -409,6 +446,7 @@ const ProductFormPage = () => {
           name: "Default Variant",
           sku: formData.sku,
           price: basePrice || 0,
+          compareAtPrice: formData.compareAtPrice || 0, // Default to product's compareAtPrice
           stock: 0,
           options: {},
         },
@@ -461,6 +499,7 @@ const ProductFormPage = () => {
         name: variantName,
         sku: autoSku,
         price: basePrice || 0,
+        compareAtPrice: formData.compareAtPrice || 0, // Default to product's compareAtPrice
         stock: 0,
         options: optionMap,
       };
@@ -481,6 +520,7 @@ const ProductFormPage = () => {
           return {
             ...nv,
             price: existing.price,
+            compareAtPrice: existing.compareAtPrice, // Preserve existing values
             stock: existing.stock,
             sku: existing.sku,
           };
@@ -488,7 +528,12 @@ const ProductFormPage = () => {
         return nv;
       });
     });
-  }, [productOptions, formData.basePrice, formData.sku]);
+  }, [
+    productOptions,
+    formData.basePrice,
+    formData.compareAtPrice,
+    formData.sku,
+  ]);
 
   // --- Submission Handler ---
 
@@ -550,7 +595,24 @@ const ProductFormPage = () => {
         return acc;
       }, {});
 
-      // 2.5 Payload Construction
+      // 2.5 Calculate compare_price from variant with highest discount
+      let comparePriceFromVariant = 0;
+      if (variants.length > 0) {
+        let maxDiscount = 0;
+        variants.forEach((v) => {
+          const compareAt = Number(v.compareAtPrice) || 0;
+          const price = Number(v.price) || 0;
+          const discount =
+            compareAt > 0 ? ((compareAt - price) / compareAt) * 100 : 0;
+          if (discount > maxDiscount) {
+            maxDiscount = discount;
+            comparePriceFromVariant = compareAt;
+          }
+        });
+      }
+
+      // 2.6 Payload Construction
+      console.log("old product Options : ", productOptions);
       const payload = {
         // --- SECTION 1: FLAGS ---
         replaceVariants: false,
@@ -564,11 +626,16 @@ const ProductFormPage = () => {
           sku: formData.sku,
           productType: productType === "school" ? schoolProductType : "general",
           basePrice: Number(formData.basePrice),
+          compareAtPrice: Number(formData.compareAtPrice),
           shortDescription: formData.shortDescription,
           description: formData.fullDescription,
           city: formData.city,
           currency: "INR",
           highlight: { ...highlightsObject },
+          metadata: {
+            categoryAttributes: { ...metadata },
+            compare_price: comparePriceFromVariant, // compareAtPrice of highest discount variant
+          },
           isActive: true, // Default to true or add toggle
         },
 
@@ -580,7 +647,7 @@ const ProductFormPage = () => {
               return { value: val, imageUrl: null }; // New value without image
             }
             // Handle { value, image }
-            return { value: val.value, imageUrl: val.image || null };
+            return { value: val.value, imageUrl: val.imageUrl || null };
           }),
           position: idx + 1,
           isRequired: true,
@@ -590,32 +657,35 @@ const ProductFormPage = () => {
 
         // --- SECTION 4: VARIANTS ---
         variants: variants.map((v) => {
-          // We need to map the flat option values back to the structure expected by backend if needed,
-          // OR just send SKU/Price/Stock/Metadata if backend handles option mapping from options array.
-          // The user request example shows:
-          /*
-            "variants": [
-                {
-                "id": "uuid-variant-1",
-                "sku": "TSHIRT-RED-S",
-                "price": 1200,
-                "stock": 50,
-                }
-            ]
-           */
-          // It seems we should include ID if we have it to update existing.
+          // Extract option values based on position in productOptions
+          // productOptions is ordered by position (1, 2, 3)
+          const option1 =
+            productOptions.length > 0 && productOptions[0].name
+              ? v.options[productOptions[0].name]
+              : null;
+          const option2 =
+            productOptions.length > 1 && productOptions[1].name
+              ? v.options[productOptions[1].name]
+              : null;
+          const option3 =
+            productOptions.length > 2 && productOptions[2].name
+              ? v.options[productOptions[2].name]
+              : null;
 
           return {
             id: v.id && !v.id.toString().startsWith("var_") ? v.id : undefined, // Send ID only if it's a real UUID
             sku: v.sku,
             price: Number(v.price),
+            compareAtPrice: Number(v.compareAtPrice),
             stock: Number(v.stock),
-            // The user example didn't explicitly show metadata in the payload structure but it might be needed for mapping
-            // However, the backend likely reconstructs it from the productOptions order + cartesian product logic if we don't provide explicit links.
-            // But to be safe and consistent with previous logic, we can send options as metadata or implicit order.
-            // BUT the specific request said: "product option and its values - recompile from the variants you are getting" implies READ side.
-            // On WRITE side: "Use this to update attributes like 'Color', 'Size'..."
-            // Let's stick to the example payload structure.
+            weight: 0.2, // Default weight as requested
+            option1: option1 || null,
+            option2: option2 || null,
+            option3: option3 || null,
+            metadata: {
+              // Add any specific metadata here if needed, e.g., barcode
+              // barcode: v.barcode
+            },
           };
         }),
 
@@ -669,6 +739,8 @@ const ProductFormPage = () => {
       } else {
         await api.post("/products/comprehensive", payload);
         toast.success("Product created successfully");
+        console.log("Payload:", payload);
+        // throw new Error("Product not created");
       }
       navigate("/products");
     } catch (err) {
@@ -712,6 +784,15 @@ const ProductFormPage = () => {
             setSchoolProductType={setSchoolProductType}
             loaders={{ loadBrands, loadCategories, loadSchools }}
           />
+
+          {/* Dynamic Category Attributes */}
+          {categoryAttributes.length > 0 && (
+            <MetadataForm
+              attributes={categoryAttributes}
+              value={metadata}
+              onChange={setMetadata}
+            />
+          )}
 
           {/* Product Highlights Section */}
           <KeyValueManager
