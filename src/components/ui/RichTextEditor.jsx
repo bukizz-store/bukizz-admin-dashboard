@@ -489,13 +489,28 @@ const ImageGridNode = Node.create({
     return {
       layout: {
         default: "2x2",
+        parseHTML: (element) => element.getAttribute("data-layout") || "2x2",
+        renderHTML: (attributes) => {
+          return { "data-layout": attributes.layout };
+        },
       },
       images: {
         default: [],
+        parseHTML: (element) => {
+          const imgElements = element.querySelectorAll("img");
+          return Array.from(imgElements).map((img) => ({
+            src: img.getAttribute("src") || "",
+            alt: img.getAttribute("alt") || "",
+          }));
+        },
+        renderHTML: () => ({}), // Images are rendered as child elements
       },
       width: {
         default: null,
-        parseHTML: (element) => element.getAttribute("data-width"),
+        parseHTML: (element) => {
+          const widthAttr = element.getAttribute("data-width");
+          return widthAttr ? parseInt(widthAttr, 10) : null;
+        },
         renderHTML: (attributes) => {
           if (!attributes.width) return {};
           return { "data-width": attributes.width };
@@ -512,8 +527,61 @@ const ImageGridNode = Node.create({
     ];
   },
 
-  renderHTML({ HTMLAttributes }) {
-    return ["div", mergeAttributes(HTMLAttributes, { "data-image-grid": "" })];
+  renderHTML({ node, HTMLAttributes }) {
+    const { layout, images, width } = node.attrs;
+
+    // Generate grid CSS based on layout
+    const getGridStyle = (layout) => {
+      const styles = {
+        "2x1":
+          "display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;",
+        "2x2":
+          "display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;",
+        "3x1":
+          "display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;",
+        "4x1":
+          "display: grid; grid-template-columns: repeat(4, 1fr); gap: 8px;",
+        "2x3":
+          "display: grid; grid-template-columns: repeat(2, 1fr); gap: 8px;",
+        "3x2":
+          "display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;",
+        "3x3":
+          "display: grid; grid-template-columns: repeat(3, 1fr); gap: 8px;",
+      };
+      return styles[layout] || styles["2x2"];
+    };
+
+    const containerStyle = width
+      ? `width: ${width}px; ${getGridStyle(layout)}`
+      : getGridStyle(layout);
+
+    // Build the image grid HTML structure
+    const imageElements = (images || []).map((img) => [
+      "div",
+      {
+        style:
+          "position: relative; overflow: hidden; border-radius: 8px; aspect-ratio: 1;",
+      },
+      [
+        "img",
+        {
+          src: img.src,
+          alt: img.alt || "",
+          style:
+            "width: 100%; height: 100%; object-fit: cover; display: block;",
+        },
+      ],
+    ]);
+
+    return [
+      "div",
+      mergeAttributes(HTMLAttributes, {
+        "data-image-grid": "",
+        "data-layout": layout,
+        style: containerStyle,
+      }),
+      ...imageElements,
+    ];
   },
 
   addNodeView() {
@@ -708,6 +776,7 @@ const RichTextEditor = ({
     onUpdate: ({ editor }) => {
       // Return HTML or plain text based on returnHtml prop
       const content = returnHtml ? editor.getHTML() : editor.getText();
+      console.log("Content:", content);
       onChange(content);
     },
     editorProps: {

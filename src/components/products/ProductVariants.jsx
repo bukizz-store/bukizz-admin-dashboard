@@ -341,6 +341,9 @@ const ProductVariants = ({
                 <th className="py-2 px-3 font-medium text-slate-600 w-32">
                   Price (₹)
                 </th>
+                <th className="py-2 px-3 font-medium text-slate-600 w-32">
+                  Compare At (₹)
+                </th>
                 <th className="py-2 px-3 font-medium text-slate-600 w-24">
                   Stock
                 </th>
@@ -369,6 +372,20 @@ const ProductVariants = ({
                       value={variant.price}
                       onChange={(e) =>
                         handleVariantChange(idx, "price", e.target.value)
+                      }
+                    />
+                  </td>
+                  <td className="py-2 px-3">
+                    <input
+                      type="number"
+                      className="w-full px-2 py-1 text-xs border border-slate-200 rounded focus:border-bukizz-orange focus:outline-none"
+                      value={variant.compareAtPrice}
+                      onChange={(e) =>
+                        handleVariantChange(
+                          idx,
+                          "compareAtPrice",
+                          e.target.value,
+                        )
                       }
                     />
                   </td>

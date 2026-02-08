@@ -311,7 +311,7 @@ const ProductBasicInfo = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
         <Input
           label="SKU (Stock Keeping Unit)"
           placeholder="PROD-001"
@@ -319,12 +319,21 @@ const ProductBasicInfo = ({
           onChange={(e) => setFormData({ ...formData, sku: e.target.value })}
         />
         <Input
-          label="Base Price"
+          label="Base Price (₹)"
           type="number"
           placeholder="0.00"
           value={formData.basePrice}
           onChange={(e) =>
             setFormData({ ...formData, basePrice: e.target.value })
+          }
+        />
+        <Input
+          label="Compare At Price (₹)"
+          type="number"
+          placeholder="0.00"
+          value={formData.compareAtPrice}
+          onChange={(e) =>
+            setFormData({ ...formData, compareAtPrice: e.target.value })
           }
         />
       </div>
