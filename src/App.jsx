@@ -17,6 +17,10 @@ import ProductFormPage from "./pages/products/ProductFormPage";
 import RetailerApprovalsPage from "./pages/approvals/RetailerApprovalsPage";
 import ProductApprovalsPage from "./pages/approvals/ProductApprovalsPage";
 import ProductDetailPage from "./pages/products/ProductDetailPage";
+import OrderListPage from "./pages/orders/OrderListPage";
+import OrderDetailPage from "./pages/orders/OrderDetailPage";
+import QueryListPage from "./pages/support/QueryListPage";
+import QueryResolutionPage from "./pages/support/QueryResolutionPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -115,6 +119,17 @@ function App() {
                   element={<ProductApprovalsPage />}
                 />
                 <Route path="/products/:id" element={<ProductDetailPage />} />
+
+                {/* Orders */}
+                <Route path="/orders" element={<OrderListPage />} />
+                <Route path="/orders/:id" element={<OrderDetailPage />} />
+
+                {/* Support Queries */}
+                <Route path="/orderqueries" element={<QueryListPage />} />
+                <Route
+                  path="/orderqueries/:id"
+                  element={<QueryResolutionPage />}
+                />
 
                 {renderDashboardRoutes()}
                 <Route path="profile" element={<UserProfile />} />

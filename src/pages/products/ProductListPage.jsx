@@ -74,7 +74,6 @@ const ProductListPage = () => {
         productType: currentType || undefined,
         isActive: currentIsActive || undefined,
         city: currentCity || undefined,
-        city: currentCity || undefined,
       };
 
       const response = await api.get("/products", { params });
