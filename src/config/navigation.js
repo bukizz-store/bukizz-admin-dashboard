@@ -10,6 +10,7 @@ import {
   ClipboardCheck,
   UserCheck,
   PackageCheck,
+  MessageSquare,
 } from "lucide-react";
 
 export const NAV_ITEMS = [
@@ -83,6 +84,16 @@ export const NAV_ITEMS = [
       },
     ],
   },
+  {
+    group: "Support",
+    items: [
+      {
+        path: "/orderqueries",
+        label: "Queries",
+        icon: MessageSquare,
+      },
+    ],
+  },
 ];
 
 // Helper map for Breadcrumbs and Page Titles
@@ -99,4 +110,5 @@ export const PATH_LABEL_MAP = {
   "/approvals/retailers": "Retailer Approvals",
   "/approvals/products": "Product Approvals",
   "/orders": "Orders",
+  "/orderqueries": "Support Queries",
 };
