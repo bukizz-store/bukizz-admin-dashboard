@@ -62,79 +62,57 @@ const ProductFormPage = () => {
 
     const fetchProduct = async () => {
       try {
-        const response = await api.get(`/products/${id}`);
+        const response = await api.get(`/products/${id}/comprehensive`);
         if (response.data?.success) {
-          const product = response.data.data.product;
-          console.log("Fetched Product:", product);
+          const product = response.data.data;
+          console.log("Fetched Comprehensive Product:", product);
 
           // 1. Basic Info
           setFormData({
-            title: product.title,
-            sku: product.sku,
-            basePrice: product.base_price,
-            compareAtPrice: product.compare_at_price || "", // Populate compareAtPrice
-            shortDescription: product.short_description || "",
-            fullDescription: product.description || "", // Ensure description flows into RTE
-            city: product.city,
-            brand: product.product_brands?.[0]?.brands
-              ? {
-                  id: product.product_brands[0].brands.id,
-                  label: product.product_brands[0].brands.name,
-                }
+            ...product.productData,
+            fullDescription: product.productData.description || "",
+            brand: product.brandData
+              ? { id: product.brandData.brandId, label: product.brandData.name }
               : null,
-            warehouse: product.products_warehouse?.warehouse
+            warehouse: product.warehouseData
               ? {
-                  id: product.products_warehouse.warehouse.id,
-                  label: product.products_warehouse.warehouse.name,
+                  id: product.warehouseData.warehouseId,
+                  label: product.warehouseData.name,
                 }
               : null,
           });
 
           // 2. Type & Context
-          const pType = product.product_type;
-          setProductType(pType === "general" ? "general" : "school");
+          setProductType(
+            product.productType === "general" ? "general" : "school",
+          );
 
-          if (pType !== "general") {
-            setSchoolProductType(pType);
+          if (product.productType !== "general") {
+            setSchoolProductType(product.productType);
           }
 
           // Categories
-          if (
-            product.product_categories &&
-            product.product_categories.length > 0
-          ) {
-            const cats = product.product_categories
-              .map((pc) => pc.categories)
-              .filter(Boolean)
-              .map((c) => ({
-                id: c.id,
-                label: c.name,
-              }));
-            setCategory(cats);
+          if (product.categories && product.categories.length > 0) {
+            setCategory(product.categories);
           }
 
           // School Data
-          if (product.school) {
-            setSchool({ id: product.school.id, label: product.school.name });
-            const sData = product.schoolData || {};
-            setGrade(sData.grade || "");
-            setIsMandatory(sData.mandatory || false);
-          } else if (product.products_school?.school) {
+          if (product.schoolData) {
             setSchool({
-              id: product.products_school.school.id,
-              label: product.products_school.school.name,
+              id: product.schoolData.schoolId,
+              label: product.schoolData.name,
             });
-            setGrade(product.products_school.grade || "");
-            setIsMandatory(product.products_school.mandatory || false);
+            setGrade(product.schoolData.grade || "");
+            setIsMandatory(product.schoolData.mandatory || false);
           }
 
           // 3. Retailer (Fetch via Warehouse)
-          if (product.products_warehouse?.warehouse?.id) {
+          if (product.warehouseData) {
             try {
-              const whId = product.products_warehouse.warehouse.id;
+              const whId = product.warehouseData.warehouseId;
               const whRes = await api.get(`/warehouses/${whId}`);
               if (whRes.data?.success) {
-                const whData = whRes.data.data.warehouse || whRes.data.data; // Handle potential wrapper
+                const whData = whRes.data.data.warehouse || whRes.data.data;
                 if (whData.retailer) {
                   setRetailer({
                     id: whData.retailer.id,
@@ -148,122 +126,35 @@ const ProductFormPage = () => {
             } catch (whErr) {
               console.error("Failed to fetch retailer for product:", whErr);
             }
-          } else if (product.retailer) {
-            setRetailer({
-              id: product.retailer.id,
-              label:
-                product.retailer.full_name ||
-                product.retailer.email ||
-                "Retailer",
-            });
           }
 
           // 4. Highlights
-          if (product.highlight) {
-            const highlightArray = Object.entries(product.highlight).map(
-              ([key, value]) => ({
-                key,
-                value,
-              }),
-            );
-            setHighlights(
-              highlightArray.length > 0
-                ? highlightArray
-                : [{ key: "", value: "" }],
-            );
+          if (product.highlights && product.highlights.length > 0) {
+            setHighlights(product.highlights);
+          } else {
+            setHighlights([{ key: "", value: "" }]);
           }
 
-          // 5. Product Options (Reconstruct from Variants)
+          // 5. Product Options (Pre-computed from Backend!)
+          if (product.productOptions && product.productOptions.length > 0) {
+            setProductOptions(product.productOptions);
+          }
+
+          // 6. Variants (Pre-computed from Backend!)
           if (product.variants && product.variants.length > 0) {
-            const reconstructedOptions = [];
-
-            // Helper to process options at positions 1, 2, 3
-            const processOptionPosition = (pos) => {
-              const refKey = `option_value_${pos}_ref`;
-
-              // Find the first variant that has this option defined to get the name
-              const referenceVariant = product.variants.find((v) => v[refKey]);
-              if (!referenceVariant) return;
-
-              const attributeName = referenceVariant[refKey].attribute_name;
-              const uniqueValuesMap = new Map(); // value -> { value, imageUrl }
-
-              product.variants.forEach((variant) => {
-                const ref = variant[refKey];
-                if (ref && ref.value) {
-                  // Only add if not already present
-                  if (!uniqueValuesMap.has(ref.value)) {
-                    uniqueValuesMap.set(ref.value, {
-                      value: ref.value,
-                      imageUrl: ref.imageUrl || null,
-                    });
-                  }
-                }
-              });
-
-              // Check if ANY value has an image URL
-              const hasImages = Array.from(uniqueValuesMap.values()).some(
-                (v) => v.imageUrl,
-              );
-
-              reconstructedOptions.push({
-                id: Date.now() + pos,
-                name: attributeName,
-                position: pos,
-                hasImages: hasImages,
-                values: Array.from(uniqueValuesMap.values()).map((v) =>
-                  hasImages ? { value: v.value, image: v.imageUrl } : v.value,
-                ),
-              });
-            };
-
-            processOptionPosition(1);
-            processOptionPosition(2);
-            processOptionPosition(3);
-
-            setProductOptions(reconstructedOptions);
-          }
-
-          // 6. Variants
-          if (product.variants) {
-            setVariants(
-              product.variants.map((v) => ({
-                id: v.id,
-                name: [
-                  v.option_value_1_ref?.value,
-                  v.option_value_2_ref?.value,
-                  v.option_value_3_ref?.value,
-                ]
-                  .filter(Boolean)
-                  .join(" / "),
-                sku: v.sku,
-                price: v.variant_price || v.price,
-                compareAtPrice: v.compare_at_price, // Populate variant compareAtPrice
-                stock: v.stock,
-                options: {
-                  [v.option_value_1_ref?.attribute_name]:
-                    v.option_value_1_ref?.value,
-                  [v.option_value_2_ref?.attribute_name]:
-                    v.option_value_2_ref?.value,
-                  [v.option_value_3_ref?.attribute_name]:
-                    v.option_value_3_ref?.value,
-                }, // Re-map for local state usage
-              })),
-            );
+            setVariants(product.variants);
           }
 
           // 7. Images
           if (product.images && product.images.length > 0) {
-            // Sort by sortOrder if available
-            const sortedImages = [...product.images].sort(
-              (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
+            setImages(product.images.map((img) => img.url));
+          }
+
+          // 8. Metadata
+          if (product.metadata) {
+            setMetadata(
+              product.metadata.categoryAttributes || product.metadata,
             );
-            setImages(sortedImages.map((img) => img.url));
-          } else if (product.mainImages && product.mainImages.length > 0) {
-            const sortedImages = [...product.mainImages].sort(
-              (a, b) => (a.sortOrder || 0) - (b.sortOrder || 0),
-            );
-            setImages(sortedImages.map((img) => img.url));
           }
         }
       } catch (error) {
@@ -523,6 +414,7 @@ const ProductFormPage = () => {
             compareAtPrice: existing.compareAtPrice, // Preserve existing values
             stock: existing.stock,
             sku: existing.sku,
+            id: existing.id,
           };
         }
         return nv;
@@ -734,7 +626,7 @@ const ProductFormPage = () => {
       console.log("Submitting Payload:", payload);
 
       if (isEditMode) {
-        await api.put(`/products/${id}`, payload);
+        await api.put(`/products/${id}/comprehensive`, payload);
         toast.success("Product updated successfully");
       } else {
         await api.post("/products/comprehensive", payload);
@@ -768,6 +660,7 @@ const ProductFormPage = () => {
         {/* Left Column (Main Info) */}
         <div className="lg:col-span-2 space-y-6">
           <ProductBasicInfo
+            isEditMode={isEditMode}
             formData={formData}
             setFormData={setFormData}
             productType={productType}
@@ -801,6 +694,7 @@ const ProductFormPage = () => {
           />
 
           <ProductVariants
+            isEditMode={isEditMode}
             formData={formData}
             setFormData={setFormData}
             productOptions={productOptions}
