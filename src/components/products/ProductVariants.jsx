@@ -5,6 +5,7 @@ import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
 const ProductVariants = ({
+  isEditMode,
   formData,
   setFormData,
   productOptions,
@@ -106,6 +107,10 @@ const ProductVariants = ({
     handleOptionChange(optionId, "values", newValues);
   };
 
+  const disabledBlurClass = isEditMode
+    ? "opacity-60 blur-[1px] pointer-events-none select-none transition-all duration-300"
+    : "";
+
   return (
     <div className="bg-white p-6 rounded-xl shadow-sm border border-slate-200">
       <h2 className="text-lg font-bold text-slate-800 mb-4">
@@ -123,25 +128,32 @@ const ProductVariants = ({
             setFormData({ ...formData, basePrice: e.target.value })
           }
         />
-        <AsyncSelect
-          label="1. Select Retailer"
-          placeholder="Search Retailer"
-          loadOptions={loadRetailers}
-          value={retailer}
-          onChange={(val) => {
-            setRetailer(val);
-            setFormData({ ...formData, warehouse: null }); // Reset warehouse when retailer changes
-          }}
-        />
-        <AsyncSelect
-          label="2. Select Warehouse"
-          placeholder={retailer ? "Select Warehouse" : "Select Retailer First"}
-          loadOptions={loadWarehouses}
-          value={formData.warehouse}
-          onChange={(val) => setFormData({ ...formData, warehouse: val })}
-          disabled={!retailer}
-          key={retailer?.id} // Force re-render/re-fetch when retailer changes
-        />
+        <div className={disabledBlurClass}>
+          <AsyncSelect
+            label="1. Select Retailer"
+            placeholder="Search Retailer"
+            loadOptions={loadRetailers}
+            value={retailer}
+            onChange={(val) => {
+              setRetailer(val);
+              setFormData({ ...formData, warehouse: null }); // Reset warehouse when retailer changes
+            }}
+            disabled={isEditMode}
+          />
+        </div>
+        <div className={disabledBlurClass}>
+          <AsyncSelect
+            label="2. Select Warehouse"
+            placeholder={
+              retailer ? "Select Warehouse" : "Select Retailer First"
+            }
+            loadOptions={loadWarehouses}
+            value={formData.warehouse}
+            onChange={(val) => setFormData({ ...formData, warehouse: val })}
+            disabled={!retailer || isEditMode}
+            key={retailer?.id} // Force re-render/re-fetch when retailer changes
+          />
+        </div>
       </div>
 
       <div className="border-t border-slate-100 pt-6">
@@ -223,7 +235,7 @@ const ProductVariants = ({
                   {!option.hasImages && (
                     <MultiSelectChips
                       placeholder="Type and press enter (e.g. S, M, Red)"
-                      values={option.values}
+                      value={option.values}
                       onChange={(vals) =>
                         handleOptionChange(option.id, "values", vals)
                       }

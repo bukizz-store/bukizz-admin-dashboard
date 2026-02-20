@@ -5,6 +5,7 @@ import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
 const ProductBasicInfo = ({
+  isEditMode,
   formData,
   setFormData,
   productType,
@@ -42,6 +43,10 @@ const ProductBasicInfo = ({
     productType === "general" ||
     (productType === "school" &&
       (schoolProductType === "uniform" || schoolProductType === "stationary"));
+
+  const disabledBlurClass = isEditMode
+    ? "opacity-60 blur-[1px] pointer-events-none select-none transition-all duration-300"
+    : "";
 
   // Generate slug from name
   const generateSlug = (name) => {
@@ -127,26 +132,32 @@ const ProductBasicInfo = ({
       </h2>
 
       {/* Type Switch */}
-      <div className="flex gap-4 mb-6">
-        <label className="flex items-center gap-2 cursor-pointer">
+      <div className={`flex gap-4 mb-6 ${disabledBlurClass}`}>
+        <label
+          className={`flex items-center gap-2 ${isEditMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+        >
           <input
             type="radio"
             name="type"
             className="w-4 h-4 text-bukizz-orange focus:ring-bukizz-orange"
             checked={productType === "general"}
             onChange={() => setProductType("general")}
+            disabled={isEditMode}
           />
           <span className="text-sm font-medium text-slate-700">
             General Product
           </span>
         </label>
-        <label className="flex items-center gap-2 cursor-pointer">
+        <label
+          className={`flex items-center gap-2 ${isEditMode ? "opacity-50 cursor-not-allowed" : "cursor-pointer"}`}
+        >
           <input
             type="radio"
             name="type"
             className="w-4 h-4 text-bukizz-orange focus:ring-bukizz-orange"
             checked={productType === "school"}
             onChange={() => setProductType("school")}
+            disabled={isEditMode}
           />
           <span className="text-sm font-medium text-slate-700">
             School Product
@@ -188,48 +199,59 @@ const ProductBasicInfo = ({
       <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
         {productType === "general" ? (
           <>
-            <AsyncSelect
-              label="Category"
-              placeholder="Select Categories"
-              loadOptions={loadCategories}
-              value={category}
-              onChange={setCategory}
-              isMulti
-            />
-            <Input
-              label="City Availability"
-              placeholder="e.g. New Delhi"
-              value={formData.city}
-              onChange={(e) =>
-                setFormData({ ...formData, city: e.target.value })
-              }
-            />
+            <div className={disabledBlurClass}>
+              <AsyncSelect
+                label="Category"
+                placeholder="Select Categories"
+                loadOptions={loadCategories}
+                value={category}
+                onChange={setCategory}
+                isMulti
+                disabled={isEditMode}
+              />
+            </div>
+            <div className={disabledBlurClass}>
+              <Input
+                label="City Availability"
+                placeholder="e.g. New Delhi"
+                value={formData.city}
+                onChange={(e) =>
+                  setFormData({ ...formData, city: e.target.value })
+                }
+                disabled={isEditMode}
+              />
+            </div>
           </>
         ) : (
           <>
-            <Select
-              label="City"
-              options={[
-                { value: "gurugram", label: "Gurugram" },
-                { value: "kanpur", label: "Kanpur" },
-              ]}
-              value={formData.city}
-              onChange={(e) => {
-                setFormData({ ...formData, city: e.target.value });
-                setSchool(null); // Reset school when city changes
-              }}
-            />
-            <AsyncSelect
-              key={formData.city} // Re-fetch schools when city changes
-              label="School"
-              placeholder={
-                formData.city ? "Select School" : "Select city first"
-              }
-              loadOptions={loadSchools}
-              value={school}
-              onChange={setSchool}
-              isDisabled={!formData.city}
-            />
+            <div className={disabledBlurClass}>
+              <Select
+                label="City"
+                options={[
+                  { value: "gurugram", label: "Gurugram" },
+                  { value: "kanpur", label: "Kanpur" },
+                ]}
+                value={formData.city}
+                onChange={(e) => {
+                  setFormData({ ...formData, city: e.target.value });
+                  setSchool(null); // Reset school when city changes
+                }}
+                disabled={isEditMode}
+              />
+            </div>
+            <div className={disabledBlurClass}>
+              <AsyncSelect
+                key={formData.city} // Re-fetch schools when city changes
+                label="School"
+                placeholder={
+                  formData.city ? "Select School" : "Select city first"
+                }
+                loadOptions={loadSchools}
+                value={school}
+                onChange={setSchool}
+                disabled={!formData.city || isEditMode}
+              />
+            </div>
           </>
         )}
       </div>
