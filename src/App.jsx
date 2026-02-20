@@ -15,6 +15,7 @@ import WarehouseDetailPage from "./pages/warehouses/WarehouseDetailPage";
 import ProductListPage from "./pages/products/ProductListPage";
 import ProductFormPage from "./pages/products/ProductFormPage";
 import RetailerApprovalsPage from "./pages/approvals/RetailerApprovalsPage";
+import RetailerSchoolApprovalsPage from "./pages/approvals/RetailerSchoolApprovalsPage";
 import ProductApprovalsPage from "./pages/approvals/ProductApprovalsPage";
 import ProductDetailPage from "./pages/products/ProductDetailPage";
 import OrderListPage from "./pages/orders/OrderListPage";
@@ -113,6 +114,10 @@ function App() {
                 <Route
                   path="/approvals/retailers"
                   element={<RetailerApprovalsPage />}
+                />
+                <Route
+                  path="/approvals/school-retailers"
+                  element={<RetailerSchoolApprovalsPage />}
                 />
                 <Route
                   path="/approvals/products"

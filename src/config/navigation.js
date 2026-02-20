@@ -78,6 +78,11 @@ export const NAV_ITEMS = [
         icon: UserCheck,
       },
       {
+        path: "/approvals/school-retailers",
+        label: "School Retailers",
+        icon: Store,
+      },
+      {
         path: "/approvals/products",
         label: "Products",
         icon: PackageCheck,
@@ -107,7 +112,9 @@ export const PATH_LABEL_MAP = {
   "/products/school": "School Products",
   "/products/general": "General Products",
   "/products/general": "General Products",
+  "/products/general": "General Products",
   "/approvals/retailers": "Retailer Approvals",
+  "/approvals/school-retailers": "School Retailer Approvals",
   "/approvals/products": "Product Approvals",
   "/orders": "Orders",
   "/orderqueries": "Support Queries",
