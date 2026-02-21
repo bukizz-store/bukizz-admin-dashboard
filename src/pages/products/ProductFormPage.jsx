@@ -488,20 +488,20 @@ const ProductFormPage = () => {
       }, {});
 
       // 2.5 Calculate compare_price from variant with highest discount
-      let comparePriceFromVariant = 0;
-      if (variants.length > 0) {
-        let maxDiscount = 0;
-        variants.forEach((v) => {
-          const compareAt = Number(v.compareAtPrice) || 0;
-          const price = Number(v.price) || 0;
-          const discount =
-            compareAt > 0 ? ((compareAt - price) / compareAt) * 100 : 0;
-          if (discount > maxDiscount) {
-            maxDiscount = discount;
-            comparePriceFromVariant = compareAt;
-          }
-        });
-      }
+      // let comparePriceFromVariant = 0;
+      // if (variants.length > 0) {
+      //   let maxDiscount = 0;
+      //   variants.forEach((v) => {
+      //     const compareAt = Number(v.compareAtPrice) || 0;
+      //     const price = Number(v.price) || 0;
+      //     const discount =
+      //       compareAt > 0 ? ((compareAt - price) / compareAt) * 100 : 0;
+      //     if (discount > maxDiscount) {
+      //       maxDiscount = discount;
+      //       comparePriceFromVariant = compareAt;
+      //     }
+      //   });
+      // }
 
       // 2.6 Payload Construction
       console.log("old product Options : ", productOptions);
@@ -526,7 +526,7 @@ const ProductFormPage = () => {
           highlight: { ...highlightsObject },
           metadata: {
             categoryAttributes: { ...metadata },
-            compare_price: comparePriceFromVariant, // compareAtPrice of highest discount variant
+            compare_price: Number(formData.compareAtPrice), // compareAtPrice of highest discount variant
           },
           isActive: true, // Default to true or add toggle
         },
