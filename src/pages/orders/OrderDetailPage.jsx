@@ -1,563 +1,831 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback, useRef } from "react";
 import { useParams, useNavigate } from "react-router-dom";
 import {
   ArrowLeft,
-  Printer,
-  Truck,
-  Mail,
+  Loader2,
   AlertCircle,
-  CheckCircle,
-  RefreshCw,
-  User,
-  MapPin,
-  CreditCard,
-  Edit,
-  ChevronDown,
   Package,
+  Printer,
+  CheckCircle,
+  MapPin,
   Phone,
+  Mail,
+  User,
+  CreditCard,
+  Truck,
+  ShoppingBag,
+  GraduationCap,
+  Hash,
+  Box,
+  RefreshCw,
+  Clock,
+  XCircle,
+  ExternalLink,
+  ChevronDown,
 } from "lucide-react";
 import {
-  mockOrders,
-  mockOrderItems,
-  mockOrderEvents,
-  mockOrderQueries,
-} from "../../data/mockData";
-import { Button, Tooltip } from "../../components/ui";
+  fetchAdminOrderById,
+  updateOrderItemStatus,
+} from "../../services/orderService";
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Constants / Helpers
+// ─────────────────────────────────────────────────────────────────────────────
+
+const STATUS_FLOW = [
+  "initialized",
+  "processed",
+  "shipped",
+  "out_for_delivery",
+  "delivered",
+];
+
+const STATUS_LABEL = {
+  initialized: "New",
+  processed: "Processed",
+  shipped: "Shipped",
+  out_for_delivery: "Out for Delivery",
+  delivered: "Delivered",
+  cancelled: "Cancelled",
+  refunded: "Refunded",
+};
+
+const STATUS_BADGE_CLASS = {
+  initialized: "bg-yellow-100 text-yellow-800",
+  processed: "bg-blue-100 text-blue-800",
+  shipped: "bg-purple-100 text-purple-800",
+  out_for_delivery: "bg-indigo-100 text-indigo-800",
+  delivered: "bg-green-100 text-green-800",
+  cancelled: "bg-red-100 text-red-800",
+  refunded: "bg-slate-100 text-slate-700",
+};
+
+const STATUS_OPTIONS = [
+  { value: "initialized", label: "New", color: "text-yellow-700 bg-yellow-50" },
+  { value: "processed", label: "Processed", color: "text-blue-700 bg-blue-50" },
+  { value: "shipped", label: "Shipped", color: "text-purple-700 bg-purple-50" },
+  {
+    value: "out_for_delivery",
+    label: "Out for Delivery",
+    color: "text-indigo-700 bg-indigo-50",
+  },
+  {
+    value: "delivered",
+    label: "Delivered",
+    color: "text-green-700 bg-green-50",
+  },
+  { value: "cancelled", label: "Cancelled", color: "text-red-700 bg-red-50" },
+  {
+    value: "refunded",
+    label: "Refunded",
+    color: "text-slate-700 bg-slate-100",
+  },
+];
+
+const PAYMENT_STATUS_CLASS = {
+  paid: "bg-green-100 text-green-800",
+  pending: "bg-yellow-100 text-yellow-800",
+  failed: "bg-red-100 text-red-800",
+  refunded: "bg-slate-100 text-slate-700",
+};
+
+function formatDate(dateStr) {
+  if (!dateStr) return "—";
+  return new Date(dateStr).toLocaleDateString("en-IN", {
+    day: "numeric",
+    month: "short",
+    year: "numeric",
+    hour: "2-digit",
+    minute: "2-digit",
+  });
+}
+
+function formatCurrency(amount) {
+  return `₹${Number(amount || 0).toLocaleString("en-IN")}`;
+}
+
+function getOverallStatus(order) {
+  const items = order?.items || [];
+  if (!items.length) return order?.status || "initialized";
+  const PRIORITY = [
+    "initialized",
+    "processed",
+    "shipped",
+    "out_for_delivery",
+    "delivered",
+    "cancelled",
+    "refunded",
+  ];
+  const idx = Math.min(
+    ...items.map((i) => PRIORITY.indexOf(i.status)).filter((i) => i >= 0),
+  );
+  return idx < PRIORITY.length ? PRIORITY[idx] : order?.status || "initialized";
+}
+
+function shortenId(order) {
+  if (order?.orderNumber) return order.orderNumber;
+  return `#${(order?.id || "").replace(/-/g, "").slice(-8).toUpperCase()}`;
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Custom Select Dropdown (no default browser option styling)
+// ─────────────────────────────────────────────────────────────────────────────
+
+function StatusSelect({ value, onChange, disabled = false, size = "md" }) {
+  const [open, setOpen] = useState(false);
+  const ref = useRef(null);
+
+  const selected =
+    STATUS_OPTIONS.find((o) => o.value === value) || STATUS_OPTIONS[0];
+
+  useEffect(() => {
+    const handler = (e) => {
+      if (ref.current && !ref.current.contains(e.target)) setOpen(false);
+    };
+    document.addEventListener("mousedown", handler);
+    return () => document.removeEventListener("mousedown", handler);
+  }, []);
+
+  const sizeClass =
+    size === "sm" ? "text-xs px-2.5 py-1.5" : "text-sm px-3 py-2.5";
+
+  return (
+    <div ref={ref} className="relative">
+      <button
+        type="button"
+        disabled={disabled}
+        onClick={() => setOpen((p) => !p)}
+        className={`flex items-center justify-between gap-2 w-full border rounded-xl font-semibold bg-white transition-all focus:outline-none focus:ring-2 focus:ring-orange-200 hover:border-slate-300 disabled:opacity-60 disabled:cursor-not-allowed ${sizeClass} ${selected.color} border-current/20 border`}
+      >
+        <span>{selected.label}</span>
+        <ChevronDown
+          className={`shrink-0 ${size === "sm" ? "h-3 w-3" : "h-4 w-4"} transition-transform ${open ? "rotate-180" : ""}`}
+        />
+      </button>
+
+      {open && (
+        <div className="absolute z-50 mt-1 w-full min-w-48 rounded-xl border border-slate-200 bg-white shadow-xl shadow-slate-200/60 py-1 overflow-hidden">
+          {STATUS_OPTIONS.map((opt) => (
+            <button
+              key={opt.value}
+              type="button"
+              onClick={() => {
+                onChange(opt.value);
+                setOpen(false);
+              }}
+              className={`w-full text-left ${size === "sm" ? "text-xs px-3 py-1.5" : "text-sm px-4 py-2"} font-semibold flex items-center gap-2 transition-colors hover:bg-slate-50 ${opt.value === value ? `${opt.color} opacity-100` : "text-slate-700"}`}
+            >
+              <span
+                className={`inline-block h-2 w-2 rounded-full shrink-0 ${opt.color.replace("text-", "bg-").split(" ")[0]}`}
+              />
+              {opt.label}
+              {opt.value === value && (
+                <span className="ml-auto text-[10px] text-slate-400 font-normal">
+                  current
+                </span>
+              )}
+            </button>
+          ))}
+        </div>
+      )}
+    </div>
+  );
+}
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Reusable Cards
+// ─────────────────────────────────────────────────────────────────────────────
+
+const Card = ({ children, className = "" }) => (
+  <div
+    className={`bg-white rounded-2xl shadow-sm border border-slate-200 ${className}`}
+  >
+    {children}
+  </div>
+);
+const CardHeader = ({ children }) => (
+  <div className="px-6 pt-5 pb-4 border-b border-slate-100">{children}</div>
+);
+const CardTitle = ({ children, icon: Icon }) => (
+  <h3 className="text-sm font-bold text-slate-500 uppercase tracking-wider flex items-center gap-2">
+    {Icon && <Icon className="h-4 w-4" />}
+    {children}
+  </h3>
+);
+const CardContent = ({ children, className = "" }) => (
+  <div className={`px-6 py-4 ${className}`}>{children}</div>
+);
+const InfoRow = ({ icon: Icon, label, value }) => (
+  <div className="flex items-start gap-3">
+    <Icon className="h-4 w-4 text-slate-400 mt-0.5 shrink-0" />
+    <div>
+      <p className="text-xs text-slate-400">{label}</p>
+      <p className="text-sm font-medium text-slate-800">{value || "—"}</p>
+    </div>
+  </div>
+);
+const SummaryRow = ({ label, value, className = "" }) => (
+  <div className={`flex justify-between text-sm ${className}`}>
+    <span className="text-slate-500">{label}</span>
+    <span className="font-medium text-slate-800">{value}</span>
+  </div>
+);
+const AddressBlock = ({ title, address }) => {
+  if (!address) return null;
+  const parts = [
+    address.line1,
+    address.line2,
+    [address.city, address.state].filter(Boolean).join(", "),
+    address.postalCode,
+    address.country,
+  ].filter(Boolean);
+  return (
+    <Card>
+      <CardHeader>
+        <CardTitle icon={MapPin}>{title}</CardTitle>
+      </CardHeader>
+      <CardContent>
+        {parts.length === 0 ? (
+          <p className="text-sm text-slate-400">No address on file</p>
+        ) : (
+          <address className="not-italic text-sm text-slate-700 leading-relaxed space-y-0.5">
+            {address.recipientName && (
+              <p className="font-semibold text-slate-900">
+                {address.recipientName}
+              </p>
+            )}
+            {address.studentName && (
+              <p className="text-xs text-slate-500">
+                Student: {address.studentName}
+              </p>
+            )}
+            {parts.map((p, i) => (
+              <p key={i}>{p}</p>
+            ))}
+            {address.phone && (
+              <p className="mt-1 text-slate-500">{address.phone}</p>
+            )}
+          </address>
+        )}
+      </CardContent>
+    </Card>
+  );
+};
+
+// ─────────────────────────────────────────────────────────────────────────────
+// Main Page
+// ─────────────────────────────────────────────────────────────────────────────
 
 const OrderDetailPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
+
   const [order, setOrder] = useState(null);
-  const [items, setItems] = useState([]);
-  const [events, setEvents] = useState([]);
-  const [activeQuery, setActiveQuery] = useState(null);
-  const [loading, setLoading] = useState(true);
-  const [activeItemId, setActiveItemId] = useState(null);
+  const [isLoading, setIsLoading] = useState(true);
+  const [updatingItemId, setUpdatingItemId] = useState(null);
+  const [error, setError] = useState(null);
 
-  useEffect(() => {
-    if (items.length > 0 && !activeItemId) {
-      setActiveItemId(items[0].id);
+  const fetchOrder = useCallback(async () => {
+    setIsLoading(true);
+    setError(null);
+    try {
+      const res = await fetchAdminOrderById(id);
+      setOrder(res?.data || res);
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Failed to load order.",
+      );
+    } finally {
+      setIsLoading(false);
     }
-  }, [items, activeItemId]);
-
-  useEffect(() => {
-    setLoading(true);
-    // Simulate Fetch
-    setTimeout(() => {
-      const foundOrder = mockOrders.find((o) => o.id === id);
-      if (foundOrder) {
-        setOrder(foundOrder);
-        setItems(mockOrderItems.filter((i) => i.order_id === id));
-        setEvents(
-          mockOrderEvents
-            .filter((e) => e.order_id === id)
-            .sort((a, b) => new Date(b.created_at) - new Date(a.created_at)),
-        );
-
-        // Check for active queries
-        const query = mockOrderQueries.find(
-          (q) => q.order_id === id && q.status !== "resolved",
-        );
-        setActiveQuery(query);
-      }
-      setLoading(false);
-    }, 500);
   }, [id]);
 
-  if (loading) {
+  useEffect(() => {
+    fetchOrder();
+  }, [fetchOrder]);
+
+  // Update a single item's status via /:orderId/items/:itemId/status
+  const handleItemStatusChange = async (itemId, newStatus) => {
+    setUpdatingItemId(itemId);
+    setError(null);
+    try {
+      await updateOrderItemStatus(id, itemId, newStatus);
+      // Optimistic update
+      setOrder((prev) => ({
+        ...prev,
+        items: (prev?.items || []).map((item) =>
+          item.id === itemId ? { ...item, status: newStatus } : item,
+        ),
+      }));
+    } catch (err) {
+      setError(
+        err.response?.data?.message ||
+          err.message ||
+          "Failed to update item status.",
+      );
+    } finally {
+      setUpdatingItemId(null);
+    }
+  };
+
+  // ── Loading ─────────────────────────────────────────────────────────────────
+  if (isLoading) {
     return (
-      <div className="p-8 text-center text-slate-500">
-        Loading order details...
+      <div className="flex items-center justify-center min-h-[60vh]">
+        <Loader2 className="h-8 w-8 text-blue-500 animate-spin" />
+        <span className="ml-3 text-slate-500">Loading order…</span>
       </div>
     );
   }
 
-  if (!order) {
+  if (error && !order) {
     return (
-      <div className="p-8 text-center">
-        <h2 className="text-xl font-bold text-slate-700">Order not found</h2>
-        <Button
-          variant="outline"
-          className="mt-4"
+      <div className="p-8 space-y-4">
+        <button
           onClick={() => navigate("/orders")}
+          className="flex items-center gap-2 text-sm text-slate-500 hover:text-slate-800"
         >
-          Back to Orders
-        </Button>
+          <ArrowLeft className="h-4 w-4" /> Back to Orders
+        </button>
+        <div className="flex flex-col items-center justify-center py-24 text-center">
+          <AlertCircle className="h-12 w-12 text-red-400 mb-4" />
+          <p className="text-lg font-semibold text-slate-700">{error}</p>
+          <button
+            onClick={fetchOrder}
+            className="mt-4 flex items-center gap-2 text-sm px-4 py-2 border border-slate-200 rounded-lg hover:bg-slate-50"
+          >
+            <RefreshCw className="h-4 w-4" /> Retry
+          </button>
+        </div>
       </div>
     );
   }
 
-  // Handle image error
-  const handleImageError = (e) => {
-    e.target.src = "https://via.placeholder.com/150?text=No+Image";
-  };
+  if (!order) return null;
 
-  const statusStyles = {
-    pending: "bg-yellow-100 text-yellow-800",
-    processing: "bg-orange-100 text-orange-800",
-    shipped: "bg-blue-100 text-blue-800",
-    delivered: "bg-green-100 text-green-800",
-    cancelled: "bg-red-100 text-red-800",
-  };
-
-  // Logic to determine main item (for now default to first, later could be via URL param)
-
-  const activeItem = items.find((i) => i.id === activeItemId) || items[0];
-  const otherItems = items.filter((i) => i.id !== activeItem?.id);
+  const items = order.items || [];
+  const shippingAddr = order.shippingAddress || {};
+  const billingAddr = order.billingAddress || {};
+  const summary = order.metadata?.orderSummary || {};
+  const events = order.events || order.timeline || [];
+  const status = getOverallStatus(order);
+  const currentStepIdx = STATUS_FLOW.indexOf(status);
+  const dispatchId = items[0]?.dispatchId;
 
   return (
-    <div className="p-6 bg-[#F8F9FC] min-h-screen font-sans">
-      {/* Breadcrumbs */}
-      <div className="flex items-center gap-2 text-sm text-slate-500 mb-6 font-medium">
-        <span
-          className="cursor-pointer hover:text-bukizz-navy"
-          onClick={() => navigate("/")}
-        >
-          Dashboard
-        </span>
-        <span className="text-slate-300">/</span>
-        <span
-          className="cursor-pointer hover:text-bukizz-navy"
-          onClick={() => navigate("/orders")}
-        >
-          Orders
-        </span>
-        <span className="text-slate-300">/</span>
-        <span className="text-slate-400">#{order.order_number}</span>
-        <span className="text-slate-300">/</span>
-        <span className="text-slate-900 font-semibold">Item Detail</span>
-      </div>
-
+    <div className="p-6 space-y-6 bg-[#F8F9FC] min-h-screen">
       {/* Header */}
-      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4 mb-8">
+      <div className="flex flex-col md:flex-row md:items-center justify-between gap-4">
         <div className="flex items-center gap-4">
-          <h1 className="text-3xl font-bold text-slate-900">
-            Order #{order.order_number}
-          </h1>
-          <span
-            className={`px-4 py-1.5 rounded-full text-xs font-bold uppercase tracking-wider ${statusStyles[order.status] || "bg-gray-100"}`}
+          <button
+            onClick={() => navigate("/orders")}
+            className="p-2 rounded-lg hover:bg-white border border-transparent hover:border-slate-200 transition-all text-slate-400"
           >
-            {order.status}
-          </span>
-        </div>
-        <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            icon={Mail}
-            className="bg-white text-slate-600 border-slate-200 shadow-sm hover:bg-slate-50 font-semibold"
-          >
-            Contact Customer
-          </Button>
-          <Button
-            variant="outline"
-            icon={Printer}
-            className="bg-white text-slate-600 border-slate-200 shadow-sm hover:bg-slate-50 font-semibold"
-          >
-            Print Invoice
-          </Button>
-          <Button
-            variant="primary"
-            icon={Truck}
-            className="bg-bukizz-orange hover:bg-orange-600 text-white border-transparent shadow-md shadow-orange-100 font-bold px-6"
-          >
-            Ship Item
-          </Button>
-        </div>
-      </div>
-
-      {/* Alert Banner */}
-      {activeQuery && (
-        <div className="bg-red-50 border border-red-100 rounded-xl p-4 mb-8 flex items-start sm:items-center gap-4 shadow-sm">
-          <div className="p-2.5 bg-red-100 rounded-lg shrink-0">
-            <AlertCircle className="text-red-500 w-6 h-6" />
-          </div>
-          <div className="flex-1">
-            <h3 className="text-red-900 font-bold text-sm mb-1">
-              Open Query for this Item
-            </h3>
-            <p className="text-red-700 text-sm font-medium">
-              Subject: "{activeQuery.subject}"
+            <ArrowLeft className="h-5 w-5" />
+          </button>
+          <div>
+            <div className="flex items-center gap-3 flex-wrap">
+              <h1 className="text-2xl font-bold text-slate-900">
+                {dispatchId || shortenId(order)}
+              </h1>
+              {dispatchId && (
+                <span className="text-sm text-slate-400 font-mono">
+                  {shortenId(order)}
+                </span>
+              )}
+              <span
+                className={`px-3 py-1 rounded-full text-xs font-bold uppercase tracking-wider ${STATUS_BADGE_CLASS[status] || "bg-slate-100 text-slate-700"}`}
+              >
+                {STATUS_LABEL[status] || status}
+              </span>
+            </div>
+            <p className="text-sm text-slate-400 mt-1">
+              Placed on {formatDate(order.createdAt)}
             </p>
           </div>
+        </div>
+        <div className="flex items-center gap-3">
+          <button className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-white hover:shadow-sm transition-all">
+            <Printer className="h-4 w-4" /> Print Invoice
+          </button>
+          {order.contactEmail && (
+            <a
+              href={`mailto:${order.contactEmail}`}
+              className="flex items-center gap-2 px-4 py-2 border border-slate-200 rounded-lg text-sm text-slate-600 hover:bg-white hover:shadow-sm transition-all"
+            >
+              <Mail className="h-4 w-4" /> Contact Customer
+            </a>
+          )}
+        </div>
+      </div>
+
+      {/* Error Banner */}
+      {error && (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <AlertCircle className="h-5 w-5 text-red-500 shrink-0" />
+          <p className="text-sm text-red-700 flex-1">{error}</p>
           <button
-            onClick={() => navigate(`/orderqueries/${activeQuery.id}`)}
-            className="text-sm font-bold text-red-600 hover:text-red-800 underline decoration-2 underline-offset-2 whitespace-nowrap"
+            onClick={() => setError(null)}
+            className="text-red-500 hover:text-red-700 text-sm font-medium"
           >
-            View Item Query #{activeQuery.id.slice(0, 7).toUpperCase()}
+            Dismiss
           </button>
         </div>
       )}
 
-      <div className="grid grid-cols-1 lg:grid-cols-3 gap-8">
-        {/* Left Column (Main) */}
-        <div className="lg:col-span-2 space-y-8">
-          {/* Main Item Card */}
-          {activeItem && (
-            <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200 hover:shadow-md transition-shadow">
-              <div className="flex items-center justify-between mb-8 border-b border-slate-100 pb-4">
-                <h3 className="text-lg font-bold text-slate-900 tracking-tight">
-                  Item Information
-                </h3>
-                <div className="bg-slate-100 px-3 py-1.5 rounded-md text-xs font-mono font-semibold text-slate-500">
-                  ID: {activeItem.sku.split("-")[1] || "ITM-001"}
-                </div>
-              </div>
-
-              <div className="flex flex-col sm:flex-row gap-8">
-                {/* Product Image */}
-                <div className="w-full sm:w-56 aspect-3/4 bg-slate-50 rounded-xl shrink-0 border border-slate-100 p-6 flex items-center justify-center group">
-                  <img
-                    src={activeItem.product_snapshot.image_url}
-                    alt={activeItem.title}
-                    onError={handleImageError}
-                    className="w-full h-full object-contain group-hover:scale-105 transition-transform duration-300 drop-shadow-sm"
-                  />
-                </div>
-
-                {/* Product Details */}
-                <div className="flex-1 flex flex-col pt-2">
-                  <div className="mb-6">
-                    <span className="inline-block text-[10px] font-extrabold text-orange-500 uppercase tracking-widest mb-2">
-                      TEXTBOOKS
-                    </span>
-                    <h4 className="text-2xl font-bold text-slate-900 mb-3 leading-tight">
-                      {activeItem.title}
-                    </h4>
-                    <p className="text-slate-500 text-sm leading-relaxed max-w-lg">
-                      Standard Edition 2023. Includes all core subjects as per
-                      the latest CBSE curriculum. High-quality paper with
-                      colored illustrations.
-                      {activeItem.product_snapshot.color &&
-                        ` Color: ${activeItem.product_snapshot.color}.`}
-                      {activeItem.product_snapshot.size &&
-                        ` Size: ${activeItem.product_snapshot.size}.`}
-                    </p>
-                  </div>
-
-                  <div className="grid grid-cols-3 gap-8 mb-8">
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">
-                        SKU Number
-                      </p>
-                      <p className="text-sm font-bold text-slate-900 font-mono">
-                        {activeItem.sku}
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">
-                        Quantity
-                      </p>
-                      <p className="text-sm font-bold text-slate-900">
-                        {activeItem.quantity} Units
-                      </p>
-                    </div>
-                    <div>
-                      <p className="text-[10px] text-slate-400 font-bold uppercase tracking-wider mb-1.5">
-                        Unit Price
-                      </p>
-                      <p className="text-sm font-bold text-slate-900">
-                        ₹{activeItem.unit_price.toFixed(2)}
-                      </p>
-                    </div>
-                  </div>
-
-                  <div className="mt-auto flex items-center justify-between pt-6 border-t border-slate-100">
-                    <span className="text-sm text-slate-500 font-semibold">
-                      Line Total (Incl. Taxes)
-                    </span>
-                    <span className="text-3xl font-bold text-orange-500 tracking-tight">
-                      ₹{activeItem.total_price.toFixed(2)}
-                    </span>
-                  </div>
-                </div>
-              </div>
-            </div>
-          )}
-
-          {/* Activity History */}
-          <div className="bg-white rounded-2xl p-8 shadow-sm border border-slate-200">
-            <h3 className="text-lg font-bold text-slate-900 mb-8">
-              Item Activity History
-            </h3>
-
-            <div className="relative pl-3">
-              {/* Vertical Dashed Line */}
-              <div className="absolute left-4.75 top-3 bottom-0 w-px border-l-2 border-dashed border-slate-200" />
-
-              <div className="space-y-10">
-                {events.map((event, idx) => (
-                  <div
-                    key={event.id}
-                    className="relative flex gap-6 items-start group"
-                  >
-                    {/* Icon Bubble */}
-                    <div
-                      className={`z-10 w-10 h-10 rounded-full flex items-center justify-center shrink-0 border-4 border-white shadow-sm ${
-                        idx === 0
-                          ? "bg-orange-500 text-white shadow-orange-100"
-                          : "bg-green-50 text-green-500"
-                      }`}
-                    >
-                      {event.new_status === "pending" ||
-                      event.new_status === "processing" ? (
-                        <RefreshCw
-                          size={16}
-                          className={idx === 0 ? "animate-spin-slow" : ""}
-                        />
-                      ) : event.new_status === "shipped" ? (
-                        <Truck size={16} />
-                      ) : (
-                        <CheckCircle size={18} />
-                      )}
-                    </div>
-
-                    <div className="pt-2">
-                      <h4 className="text-base font-bold text-slate-900">
-                        {event.new_status === "pending"
-                          ? "Item Reserved"
-                          : event.new_status === "processing"
-                            ? "Order Processing"
-                            : event.new_status === "shipped"
-                              ? "Handed to Logistics"
-                              : `Order ${event.new_status.charAt(0).toUpperCase() + event.new_status.slice(1)}`}
-                      </h4>
-                      <p className="text-xs text-slate-400 font-medium mt-1 flex items-center gap-2">
-                        {new Date(event.created_at).toLocaleString()}
-                      </p>
-
-                      {idx === 0 && (
-                        <div className="mt-3 inline-flex items-center gap-2 px-3 py-1 bg-slate-100 rounded-md">
-                          <span className="w-1.5 h-1.5 rounded-full bg-slate-400"></span>
-                          <span className="text-xs font-semibold text-slate-600">
-                            Stock Lock #SL-102
-                          </span>
-                        </div>
-                      )}
-
-                      {event.changed_by !== "system" && (
-                        <div className="flex items-center gap-2 mt-2">
-                          <div className="w-5 h-5 rounded-full bg-slate-200 overflow-hidden">
-                            <User size={20} className="mt-1 text-slate-400" />
-                          </div>
-                          <span className="text-xs text-slate-500 font-medium">
-                            Verified by {event.changed_by}
-                          </span>
-                        </div>
-                      )}
-                    </div>
-                  </div>
-                ))}
-              </div>
-            </div>
-          </div>
-
-          {/* Other Items Section */}
-          {otherItems.length > 0 && (
-            <div className="mt-8">
-              <h3 className="text-lg font-bold text-slate-900 mb-6">
-                Other Items in this Order
-              </h3>
-              <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-                {otherItems.map((item) => (
-                  <div
-                    key={item.id}
-                    onClick={() => setActiveItemId(item.id)}
-                    className="bg-white p-4 rounded-xl border border-slate-200 shadow-sm flex gap-4 cursor-pointer hover:border-orange-300 hover:shadow-md transition-all group"
-                  >
-                    <div className="w-16 h-16 bg-slate-100 rounded-lg shrink-0 flex items-center justify-center p-2 border border-slate-100 group-hover:border-orange-100">
-                      <img
-                        src={item.product_snapshot.image_url}
-                        alt={item.title}
-                        onError={handleImageError}
-                        className="w-full h-full object-contain"
-                      />
-                    </div>
-                    <div>
-                      <h4 className="font-bold text-slate-900 text-sm line-clamp-2">
-                        {item.title}
-                      </h4>
-                      <p className="text-xs text-slate-500 mt-1">
-                        Qty: {item.quantity} • ₹{item.unit_price}
-                      </p>
-                      <span
-                        className={`inline-block mt-2 px-2 py-0.5 text-[10px] font-bold rounded uppercase ${
-                          order.status === "shipped" ||
-                          order.status === "delivered"
-                            ? "bg-green-100 text-green-700"
-                            : "bg-yellow-100 text-yellow-700"
-                        }`}
+      {/* Status Timeline */}
+      {!["cancelled", "refunded"].includes(status) ? (
+        <Card>
+          <CardContent className="py-6">
+            <div className="flex items-center justify-between">
+              {STATUS_FLOW.map((step, i) => {
+                const done = currentStepIdx >= i;
+                const current = currentStepIdx === i;
+                return (
+                  <React.Fragment key={step}>
+                    <div className="flex flex-col items-center gap-1.5">
+                      <div
+                        className={`flex h-9 w-9 items-center justify-center rounded-full border-2 transition-all ${done ? "border-orange-500 bg-orange-500 text-white" : "border-slate-200 bg-white text-slate-400"} ${current ? "ring-4 ring-orange-100" : ""}`}
                       >
-                        {order.status}
+                        {done ? (
+                          <CheckCircle className="h-4 w-4" />
+                        ) : (
+                          <span className="text-xs font-bold">{i + 1}</span>
+                        )}
+                      </div>
+                      <span
+                        className={`text-xs font-medium text-center max-w-20 ${done ? "text-orange-700" : "text-slate-400"}`}
+                      >
+                        {STATUS_LABEL[step]}
                       </span>
                     </div>
-                  </div>
-                ))}
-              </div>
+                    {i < STATUS_FLOW.length - 1 && (
+                      <div
+                        className={`flex-1 h-0.5 mx-2 ${currentStepIdx > i ? "bg-orange-400" : "bg-slate-200"}`}
+                      />
+                    )}
+                  </React.Fragment>
+                );
+              })}
             </div>
+          </CardContent>
+        </Card>
+      ) : (
+        <div className="flex items-center gap-3 bg-red-50 border border-red-200 rounded-xl px-4 py-3">
+          <XCircle className="h-5 w-5 text-red-500" />
+          <span className="text-sm font-semibold text-red-700">
+            This order has been {status}.
+          </span>
+        </div>
+      )}
+
+      {/* Main Grid */}
+      <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
+        {/* Left — 2/3 */}
+        <div className="lg:col-span-2 space-y-6">
+          {/* Order Items */}
+          <Card>
+            <CardHeader>
+              <CardTitle icon={Package}>Order Items ({items.length})</CardTitle>
+            </CardHeader>
+            <CardContent className="py-0">
+              <div className="divide-y divide-slate-100">
+                {items.map((item) => {
+                  const snap = item.productSnapshot || {};
+                  const img =
+                    item.variant?.options?.find((o) => o.imageUrl)?.imageUrl ||
+                    snap.image ||
+                    snap.image_url;
+                  const isBookset = snap.productType === "bookset";
+                  const isUpdating = updatingItemId === item.id;
+
+                  return (
+                    <div key={item.id} className="py-5 space-y-3">
+                      <div className="flex gap-4">
+                        {/* Thumbnail */}
+                        <div
+                          className={`h-16 w-16 shrink-0 rounded-xl flex items-center justify-center overflow-hidden border ${img ? "bg-slate-50 border-slate-200" : isBookset ? "bg-violet-50 border-violet-100" : "bg-slate-100 border-slate-200"}`}
+                        >
+                          {img ? (
+                            <img
+                              src={img}
+                              alt={item.title}
+                              className="h-full w-full object-cover"
+                              onError={(e) => {
+                                e.target.style.display = "none";
+                              }}
+                            />
+                          ) : isBookset ? (
+                            <GraduationCap className="h-7 w-7 text-violet-400" />
+                          ) : (
+                            <ShoppingBag className="h-7 w-7 text-slate-300" />
+                          )}
+                        </div>
+
+                        {/* Info */}
+                        <div className="flex-1 min-w-0">
+                          <p className="font-semibold text-slate-900 truncate">
+                            {item.title || snap.title || "Product"}
+                            {item.schoolName && (
+                              <span className="text-slate-400 ml-1 font-normal text-sm">
+                                — {item.schoolName}
+                              </span>
+                            )}
+                          </p>
+
+                          {/* Variant options */}
+                          {item.variant?.options?.length > 0 && (
+                            <div className="mt-1 flex flex-wrap gap-1">
+                              {item.variant.options
+                                .sort(
+                                  (a, b) =>
+                                    (a.attribute?.position || 0) -
+                                    (b.attribute?.position || 0),
+                                )
+                                .map((opt) => (
+                                  <span
+                                    key={opt.id}
+                                    className="inline-flex items-center gap-1 text-xs bg-slate-100 text-slate-700 rounded-md px-2 py-0.5"
+                                  >
+                                    {opt.imageUrl && (
+                                      <img
+                                        src={opt.imageUrl}
+                                        alt={opt.value}
+                                        className="h-3 w-3 rounded-full object-cover"
+                                      />
+                                    )}
+                                    <span className="font-medium capitalize">
+                                      {opt.attribute?.name}:
+                                    </span>
+                                    <span className="capitalize">
+                                      {opt.value}
+                                    </span>
+                                  </span>
+                                ))}
+                            </div>
+                          )}
+
+                          <div className="mt-1.5 flex flex-wrap gap-x-4 text-xs text-slate-500">
+                            {item.sku && (
+                              <span className="flex items-center gap-1">
+                                <Hash className="h-3 w-3" />
+                                {item.sku}
+                              </span>
+                            )}
+                            <span className="flex items-center gap-1">
+                              <Box className="h-3 w-3" />
+                              Qty: {item.quantity}
+                            </span>
+                          </div>
+                        </div>
+
+                        {/* Price */}
+                        <div className="text-right shrink-0">
+                          <p className="font-bold text-slate-900">
+                            {formatCurrency(item.totalPrice)}
+                          </p>
+                          <p className="text-xs text-slate-400 mt-0.5">
+                            {formatCurrency(item.unitPrice)} × {item.quantity}
+                          </p>
+                        </div>
+                      </div>
+
+                      {/* Per-item controls: status dropdown + view detail link */}
+                      <div className="flex items-center gap-3 pl-20">
+                        <div className="w-48">
+                          <StatusSelect
+                            value={item.status || "initialized"}
+                            onChange={(newStatus) =>
+                              handleItemStatusChange(item.id, newStatus)
+                            }
+                            disabled={isUpdating}
+                            size="sm"
+                          />
+                        </div>
+                        {isUpdating && (
+                          <Loader2 className="h-4 w-4 animate-spin text-blue-400" />
+                        )}
+                        <button
+                          onClick={() =>
+                            navigate(`/orders/${id}/items/${item.id}`)
+                          }
+                          className="ml-auto flex items-center gap-1.5 text-xs text-blue-600 hover:text-blue-800 hover:underline font-medium"
+                        >
+                          <ExternalLink className="h-3.5 w-3.5" />
+                          View Item Detail
+                        </button>
+                      </div>
+                    </div>
+                  );
+                })}
+              </div>
+
+              {/* Order Summary */}
+              <div className="border-t border-slate-100 pt-4 pb-4 space-y-2">
+                <SummaryRow
+                  label="Subtotal"
+                  value={formatCurrency(summary.subtotal || order.totalAmount)}
+                />
+                {summary.discount > 0 && (
+                  <SummaryRow
+                    label="Discount"
+                    value={`-${formatCurrency(summary.discount)}`}
+                    className="text-emerald-600"
+                  />
+                )}
+                {summary.deliveryFee > 0 && (
+                  <SummaryRow
+                    label="Delivery Fee"
+                    value={formatCurrency(summary.deliveryFee)}
+                  />
+                )}
+                {summary.platformFee > 0 && (
+                  <SummaryRow
+                    label="Platform Fee"
+                    value={formatCurrency(summary.platformFee)}
+                  />
+                )}
+                {summary.tax > 0 && (
+                  <SummaryRow label="Tax" value={formatCurrency(summary.tax)} />
+                )}
+                <div className="flex justify-between font-bold text-base text-slate-900 pt-2 border-t border-slate-100">
+                  <span>Total</span>
+                  <span>{formatCurrency(order.totalAmount)}</span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Addresses */}
+          <div className="grid grid-cols-1 md:grid-cols-2 gap-6">
+            <AddressBlock title="Shipping Address" address={shippingAddr} />
+            <AddressBlock title="Billing Address" address={billingAddr} />
+          </div>
+
+          {/* Activity History */}
+          {events.length > 0 && (
+            <Card>
+              <CardHeader>
+                <CardTitle icon={Clock}>Activity History</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="relative pl-3 space-y-6">
+                  <div className="absolute left-4.5 top-2 bottom-2 w-px bg-slate-200" />
+                  {events.map((event, idx) => (
+                    <div
+                      key={event.id || idx}
+                      className="relative flex gap-4 items-start"
+                    >
+                      <div
+                        className={`z-10 w-8 h-8 rounded-full flex items-center justify-center shrink-0 border-2 border-white shadow-sm ${idx === 0 ? "bg-orange-500 text-white" : "bg-slate-100 text-slate-500"}`}
+                      >
+                        {(event.newStatus || event.new_status) === "shipped" ? (
+                          <Truck className="h-3.5 w-3.5" />
+                        ) : (event.newStatus || event.new_status) ===
+                          "delivered" ? (
+                          <CheckCircle className="h-3.5 w-3.5" />
+                        ) : (event.newStatus || event.new_status) ===
+                          "cancelled" ? (
+                          <XCircle className="h-3.5 w-3.5" />
+                        ) : (
+                          <RefreshCw
+                            className={`h-3.5 w-3.5 ${idx === 0 ? "animate-spin" : ""}`}
+                          />
+                        )}
+                      </div>
+                      <div className="pt-1">
+                        <p className="text-sm font-semibold text-slate-900">
+                          {STATUS_LABEL[event.newStatus || event.new_status] ||
+                            event.newStatus ||
+                            event.new_status ||
+                            "Update"}
+                        </p>
+                        {event.note && (
+                          <p className="text-xs text-slate-500 mt-0.5">
+                            {event.note}
+                          </p>
+                        )}
+                        <p className="text-xs text-slate-400 mt-1">
+                          {formatDate(event.createdAt || event.created_at)}
+                        </p>
+                        {(event.changedBy || event.changed_by) && (
+                          <span className="text-xs text-slate-400">
+                            by{" "}
+                            {event.users?.full_name ||
+                              event.changedBy ||
+                              event.changed_by}
+                          </span>
+                        )}
+                      </div>
+                    </div>
+                  ))}
+                </div>
+              </CardContent>
+            </Card>
           )}
         </div>
 
-        {/* Right Column (Sidebar) */}
+        {/* Right — 1/3 */}
         <div className="space-y-6">
-          {/* Manage Item Card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-6">
-              Manage Item
-            </h3>
-
-            <div className="mb-6">
-              <label className="text-[10px] font-bold text-slate-400 uppercase tracking-wide mb-2 block">
-                Update Item Status
-              </label>
-              <div className="relative group">
-                <select
-                  className="w-full appearance-none bg-slate-50 border border-slate-200 text-slate-900 text-sm rounded-lg px-4 py-3 outline-none focus:ring-2 focus:ring-orange-100 focus:border-orange-400 font-semibold transition-all cursor-pointer hover:border-slate-300"
-                  defaultValue={order.status}
-                >
-                  <option value="pending">Pending</option>
-                  <option value="processing">Processing</option>
-                  <option value="shipped">Shipped</option>
-                  <option value="delivered">Delivered</option>
-                  <option value="cancelled">Cancelled</option>
-                </select>
-                <ChevronDown className="absolute right-4 top-1/2 -translate-y-1/2 text-slate-400 w-4 h-4 pointer-events-none group-hover:text-slate-600 transition-colors" />
-              </div>
-            </div>
-
-            <button className="w-full bg-bukizz-orange hover:bg-orange-600 text-white font-bold py-3.5 rounded-xl shadow-md shadow-orange-100 hover:shadow-orange-200 transition-all text-sm transform active:scale-[0.98]">
-              Update Item
-            </button>
-          </div>
-
-          {/* Warehouse Details (New) */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-6">
-              Warehouse Details
-            </h3>
-
-            <div className="space-y-4">
-              <div className="flex items-start gap-4">
-                <div className="w-10 h-10 rounded-lg bg-indigo-50 flex items-center justify-center text-indigo-600 shrink-0 border border-indigo-100">
-                  <Package size={20} />
+          {/* Customer */}
+          <Card>
+            <CardHeader>
+              <CardTitle icon={User}>Customer</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="flex items-center gap-3 mb-4">
+                <div className="h-10 w-10 rounded-full bg-orange-50 text-orange-600 font-bold text-sm flex items-center justify-center border border-orange-100 shrink-0">
+                  {(
+                    order.shippingAddress?.recipientName ||
+                    order.contactEmail ||
+                    "C"
+                  )
+                    .charAt(0)
+                    .toUpperCase()}
                 </div>
                 <div>
-                  <p className="text-sm font-bold text-slate-900">
-                    Gurugram Central
+                  <p className="font-semibold text-slate-900">
+                    {order.shippingAddress?.recipientName ||
+                      order.contactEmail ||
+                      "Customer"}
                   </p>
-                  <p className="text-xs text-slate-500 mt-0.5">WH-GGN-001</p>
+                  <p className="text-xs text-slate-400">Customer</p>
                 </div>
               </div>
-
-              <div className="bg-slate-50 rounded-lg p-3 text-xs text-slate-600 border border-slate-100">
-                <p>
-                  <span className="font-bold">Zone:</span> A-12 •{" "}
-                  <span className="font-bold">Bin:</span> 44
-                </p>
-                <p className="mt-1">
-                  <span className="font-bold">Picker:</span> Rajesh Kumar
-                </p>
-              </div>
-            </div>
-          </div>
-
-          {/* Customer Info Card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-6">
-              Customer Info
-            </h3>
-
-            <div className="flex items-center gap-4 mb-8">
-              <div className="w-12 h-12 rounded-full bg-orange-50 flex items-center justify-center text-orange-600 font-bold text-lg border border-orange-100 shrink-0">
-                {order.customer_name.charAt(0)}
-              </div>
-              <div>
-                <div className="font-bold text-slate-900 text-base">
-                  {order.customer_name}
-                </div>
-                <div className="text-xs text-slate-400 font-medium">
-                  Member since 2021
-                </div>
-              </div>
-            </div>
-
-            <div className="space-y-4">
-              <div className="flex items-center gap-3 group cursor-pointer">
-                <Mail
-                  size={16}
-                  className="text-orange-400 shrink-0 group-hover:scale-110 transition-transform"
+              <div className="space-y-3">
+                <InfoRow icon={Mail} label="Email" value={order.contactEmail} />
+                <InfoRow
+                  icon={Phone}
+                  label="Phone"
+                  value={order.contactPhone || order.shippingAddress?.phone}
                 />
-                <span className="text-sm text-slate-600 font-medium group-hover:text-bukizz-orange transition-colors">
-                  {order.contact_email}
-                </span>
+                {shippingAddr.studentName && (
+                  <InfoRow
+                    icon={GraduationCap}
+                    label="Student"
+                    value={shippingAddr.studentName}
+                  />
+                )}
               </div>
-              <div className="flex items-center gap-3 group cursor-pointer">
-                <Phone
-                  size={16}
-                  className="text-orange-400 shrink-0 group-hover:scale-110 transition-transform"
-                />
-                <span className="text-sm text-slate-600 font-medium group-hover:text-bukizz-orange transition-colors">
-                  {order.contact_phone}
-                </span>
-              </div>
-            </div>
-          </div>
+            </CardContent>
+          </Card>
 
-          {/* Shipping Address Card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <div className="flex items-center justify-between mb-6">
-              <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">
-                Shipping Address
-              </h3>
-              <button className="text-[10px] font-bold text-orange-600 hover:text-orange-700 uppercase tracking-wider hover:underline decoration-2 underline-offset-2">
-                Edit
-              </button>
-            </div>
-
-            <div className="bg-slate-50 rounded-xl p-5 border border-slate-100">
-              <p className="text-sm text-slate-600 leading-relaxed font-medium">
-                <span className="block mb-1 text-slate-900 font-bold">
-                  {order.shipping_address.street}
-                </span>
-                {order.shipping_address.city}, {order.shipping_address.state},
-                <br />
-                {order.shipping_address.zip}
-                <br />
-                {order.shipping_address.country}
-              </p>
-            </div>
-          </div>
-
-          {/* Payment Info Card */}
-          <div className="bg-white rounded-2xl p-6 shadow-sm border border-slate-200">
-            <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest mb-6">
-              Payment Info
-            </h3>
-
-            <div className="flex items-center justify-between p-4 bg-slate-50 rounded-xl border border-slate-100">
-              <div className="flex items-center gap-3">
-                <div className="w-10 h-10 rounded-lg bg-white shadow-sm flex items-center justify-center text-orange-500 border border-slate-100">
-                  <CreditCard size={20} />
+          {/* Payment */}
+          <Card>
+            <CardHeader>
+              <CardTitle icon={CreditCard}>Payment</CardTitle>
+            </CardHeader>
+            <CardContent>
+              <div className="space-y-3">
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">Method</span>
+                  <span className="text-sm font-semibold text-slate-900 uppercase">
+                    {order.paymentMethod || "—"}
+                  </span>
                 </div>
-                <div>
-                  <div className="text-sm font-bold text-slate-900">
-                    {order.payment_method}
+                <div className="flex items-center justify-between">
+                  <span className="text-sm text-slate-500">Status</span>
+                  <span
+                    className={`px-2.5 py-1 rounded-md text-xs font-bold uppercase ${PAYMENT_STATUS_CLASS[order.paymentStatus] || "bg-slate-100 text-slate-700"}`}
+                  >
+                    {order.paymentStatus || "—"}
+                  </span>
+                </div>
+                <div className="flex items-center justify-between border-t border-slate-100 pt-3">
+                  <span className="text-sm font-bold text-slate-900">
+                    Total
+                  </span>
+                  <span className="text-base font-bold text-orange-500">
+                    {formatCurrency(order.totalAmount)}
+                  </span>
+                </div>
+              </div>
+            </CardContent>
+          </Card>
+
+          {/* Warehouse */}
+          {order.warehouseId && (
+            <Card>
+              <CardHeader>
+                <CardTitle icon={Package}>Warehouse</CardTitle>
+              </CardHeader>
+              <CardContent>
+                <div className="flex items-start gap-3">
+                  <div className="h-9 w-9 rounded-lg bg-indigo-50 text-indigo-600 flex items-center justify-center border border-indigo-100 shrink-0">
+                    <Package className="h-4 w-4" />
                   </div>
-                  <div className="text-[10px] text-slate-400 uppercase font-bold tracking-wider">
-                    TXN: {order.id.split("-")[1] || "BKP-8821"}
+                  <div>
+                    <p className="text-sm font-semibold text-slate-900 font-mono">
+                      {order.warehouseId}
+                    </p>
+                    <p className="text-xs text-slate-400 mt-0.5">
+                      Warehouse ID
+                    </p>
                   </div>
                 </div>
-              </div>
-              <span
-                className={`px-2.5 py-1 rounded-md text-[10px] font-bold uppercase tracking-wider ${
-                  order.payment_status === "paid"
-                    ? "bg-green-100 text-green-700"
-                    : "bg-yellow-100 text-yellow-700"
-                }`}
-              >
-                {order.payment_status}
-              </span>
-            </div>
-          </div>
+              </CardContent>
+            </Card>
+          )}
         </div>
       </div>
     </div>
