@@ -20,6 +20,7 @@ import ProductApprovalsPage from "./pages/approvals/ProductApprovalsPage";
 import ProductDetailPage from "./pages/products/ProductDetailPage";
 import OrderListPage from "./pages/orders/OrderListPage";
 import OrderDetailPage from "./pages/orders/OrderDetailPage";
+import OrderItemDetailPage from "./pages/orders/OrderItemDetailPage";
 import QueryListPage from "./pages/support/QueryListPage";
 import QueryResolutionPage from "./pages/support/QueryResolutionPage";
 import Login from "./pages/auth/Login";
@@ -128,6 +129,10 @@ function App() {
                 {/* Orders */}
                 <Route path="/orders" element={<OrderListPage />} />
                 <Route path="/orders/:id" element={<OrderDetailPage />} />
+                <Route
+                  path="/orders/:id/items/:itemId"
+                  element={<OrderItemDetailPage />}
+                />
 
                 {/* Support Queries */}
                 <Route path="/orderqueries" element={<QueryListPage />} />
