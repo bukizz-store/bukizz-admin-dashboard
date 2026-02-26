@@ -97,7 +97,7 @@ const PayoutHistoryTable = ({ history, isLoading }) => {
                 {formatDate(payout.created_at || payout.date)}
               </td>
               <td className="px-4 py-3 font-semibold text-slate-800 whitespace-nowrap">
-                {formatINR(payout.amount)}
+                {formatINR(payout.total_amount)}
               </td>
               <td className="px-4 py-3 text-slate-600 whitespace-nowrap">
                 <span className="px-2 py-0.5 bg-slate-100 rounded text-xs font-mono">
@@ -105,10 +105,7 @@ const PayoutHistoryTable = ({ history, isLoading }) => {
                 </span>
               </td>
               <td className="px-4 py-3 font-mono text-slate-500 whitespace-nowrap">
-                {payout.referenceNumber ||
-                  payout.reference_no ||
-                  payout.utr ||
-                  "—"}
+                {payout.reference_number || "—"}
               </td>
               <td className="px-4 py-3 whitespace-nowrap">
                 {payout.receiptUrl || payout.receipt_url ? (
