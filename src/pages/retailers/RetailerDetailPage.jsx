@@ -20,6 +20,7 @@ import {
 import { Button, ConfirmationModal, Tooltip } from "../../components/ui";
 import { StatusBadge, DataTable } from "../../components/common";
 import AddWarehouseModal from "../../components/retailers/AddWarehouseModal";
+import RetailerSettlementsTab from "../../components/retailers/settlements/RetailerSettlementsTab";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
@@ -386,24 +387,27 @@ const RetailerDetailPage = () => {
         <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-4 mb-4 border-b border-slate-200 pb-1">
           {/* Tabs */}
           <div className="flex gap-8">
-            {["warehouses", "general-products", "school-products"].map(
-              (tab) => (
-                <button
-                  key={tab}
-                  onClick={() => setActiveTab(tab)}
-                  className={`pb-3 text-sm font-medium transition-colors relative capitalize ${
-                    activeTab === tab
-                      ? "text-orange-500"
-                      : "text-slate-500 hover:text-slate-700"
-                  }`}
-                >
-                  {tab.replace("-", " ")}
-                  {activeTab === tab && (
-                    <span className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 rounded-t-full" />
-                  )}
-                </button>
-              ),
-            )}
+            {[
+              "warehouses",
+              "general-products",
+              "school-products",
+              "settlements",
+            ].map((tab) => (
+              <button
+                key={tab}
+                onClick={() => setActiveTab(tab)}
+                className={`pb-3 text-sm font-medium transition-colors relative capitalize ${
+                  activeTab === tab
+                    ? "text-orange-500"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                {tab.replace("-", " ")}
+                {activeTab === tab && (
+                  <span className="absolute bottom-0 left-0 w-full h-0.5 bg-orange-500 rounded-t-full" />
+                )}
+              </button>
+            ))}
           </div>
         </div>
 
@@ -499,6 +503,11 @@ const RetailerDetailPage = () => {
               emptyMessage="No school products found."
             />
           </div>
+        )}
+
+        {/* Settlements Tab */}
+        {activeTab === "settlements" && (
+          <RetailerSettlementsTab retailerId={id} />
         )}
       </div>
 
