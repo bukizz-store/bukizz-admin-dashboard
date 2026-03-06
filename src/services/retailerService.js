@@ -4,3 +4,8 @@ export const searchRetailers = async (role = "retailer") => {
   const response = await api.get("/users/admin/search", { params: { role } });
   return response.data;
 };
+
+export const getDueSettlements = async () => {
+  const response = await api.get("/settlements/admin/due-today");
+  return response.data;
+};

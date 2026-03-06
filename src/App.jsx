@@ -23,6 +23,7 @@ import OrderDetailPage from "./pages/orders/OrderDetailPage";
 import OrderItemDetailPage from "./pages/orders/OrderItemDetailPage";
 import QueryListPage from "./pages/support/QueryListPage";
 import QueryResolutionPage from "./pages/support/QueryResolutionPage";
+import AdminGlobalSettlements from "./pages/settlements/AdminGlobalSettlements";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -139,6 +140,12 @@ function App() {
                 <Route
                   path="/orderqueries/:id"
                   element={<QueryResolutionPage />}
+                />
+
+                {/* Settlements */}
+                <Route
+                  path="/settlements/due-today"
+                  element={<AdminGlobalSettlements />}
                 />
 
                 {renderDashboardRoutes()}
