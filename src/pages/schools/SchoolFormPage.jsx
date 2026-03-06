@@ -19,7 +19,7 @@ import { useToast } from "../../context/ToastContext";
 const SchoolFormPage = () => {
   const { id } = useParams();
   const navigate = useNavigate();
-  const { toast } = useToast();
+  const toast = useToast();
   const isEditMode = Boolean(id);
 
   const [isLoading, setIsLoading] = useState(false);
@@ -127,13 +127,13 @@ const SchoolFormPage = () => {
 
       if (isEditMode) {
         await api.put(`/schools/${id}`, submitData, config);
-        toast.success("School updated successfully");
+        toast.success("School updated successfully! Redirecting...");
       } else {
         await api.post("/schools", submitData, config);
-        toast.success("School onboarded successfully");
+        toast.success("School onboarded successfully! Redirecting...");
       }
 
-      navigate("/schools");
+      setTimeout(() => navigate("/schools"), 1200);
     } catch (error) {
       console.error("Submission error", error);
       toast.error("Failed to save school");
