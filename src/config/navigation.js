@@ -11,6 +11,7 @@ import {
   UserCheck,
   PackageCheck,
   MessageSquare,
+  Wallet,
 } from "lucide-react";
 
 export const NAV_ITEMS = [
@@ -99,6 +100,16 @@ export const NAV_ITEMS = [
       },
     ],
   },
+  {
+    group: "Settlements",
+    items: [
+      {
+        path: "/settlements/due-today",
+        label: "Due Settlements",
+        icon: Wallet,
+      },
+    ],
+  },
 ];
 
 // Helper map for Breadcrumbs and Page Titles
@@ -118,4 +129,5 @@ export const PATH_LABEL_MAP = {
   "/approvals/products": "Product Approvals",
   "/orders": "Orders",
   "/orderqueries": "Support Queries",
+  "/settlements/due-today": "Due Settlements",
 };
