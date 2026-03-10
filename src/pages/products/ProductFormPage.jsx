@@ -623,7 +623,7 @@ const ProductFormPage = () => {
             : null,
       };
 
-      console.log("Submitting Payload:", payload);
+      // console.log("Submitting Payload:", payload);
 
       if (isEditMode) {
         await api.put(`/products/${id}/comprehensive`, payload);
