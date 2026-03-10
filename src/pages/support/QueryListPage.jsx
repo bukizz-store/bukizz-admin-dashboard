@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useCallback } from "react";
 import { useNavigate } from "react-router-dom";
 import {
   Search,
@@ -6,76 +6,104 @@ import {
   AlertCircle,
   Clock,
   CheckCircle,
-  MoreHorizontal,
+  RefreshCw,
 } from "lucide-react";
-import { mockOrderQueries } from "../../data/mockData";
+import { fetchQueries } from "../../services/queryService";
 import { DataTable } from "../../components/common";
 import { Button } from "../../components/ui";
 
+// ─── Helpers ──────────────────────────────────────────────────────────────────
+
+function useDebounce(value, delay) {
+  const [debounced, setDebounced] = useState(value);
+  useEffect(() => {
+    const t = setTimeout(() => setDebounced(value), delay);
+    return () => clearTimeout(t);
+  }, [value, delay]);
+  return debounced;
+}
+
+const TAB_STATUS_MAP = {
+  all: "",
+  open: "open",
+  resolved: "resolved",
+};
+
+// ─── Component ────────────────────────────────────────────────────────────────
+
 const QueryListPage = () => {
   const navigate = useNavigate();
-  const [activeTab, setActiveTab] = useState("all"); // all, open, resolved
-  const [queries, setQueries] = useState([]);
-  const [filteredQueries, setFilteredQueries] = useState([]);
-  const [searchTerm, setSearchTerm] = useState("");
 
-  // Stats Data (Mocked for UI matching)
+  // Filter / pagination state
+  const [activeTab, setActiveTab] = useState("all");
+  const [searchTerm, setSearchTerm] = useState("");
+  const debouncedSearch = useDebounce(searchTerm, 500);
+
+  // Data state
+  const [queries, setQueries] = useState([]);
+  const [loading, setLoading] = useState(false);
+  const [error, setError] = useState(null);
+  const [page, setPage] = useState(1);
+  const [totalPages, setTotalPages] = useState(1);
+  const [totalCount, setTotalCount] = useState(0);
+  const limit = 10;
+
+  // Stats Data (placeholder — no dedicated stats endpoint yet)
   const stats = {
     unassigned: 12,
     avgResponse: "1.4h",
     resolvedToday: 28,
   };
 
-  useEffect(() => {
-    // Simulate Fetch
-    const sorted = [...mockOrderQueries].sort((a, b) => {
-      // Sort by Priority (High > Medium > Low)
-      const priorityOrder = { high: 0, medium: 1, low: 2 };
-      if (priorityOrder[a.priority] !== priorityOrder[b.priority]) {
-        return priorityOrder[a.priority] - priorityOrder[b.priority];
-      }
-      // Then by Date (Newest first)
-      return new Date(b.created_at) - new Date(a.created_at);
-    });
-    setQueries(sorted);
-    setFilteredQueries(sorted);
-  }, []);
+  // ── Fetch ─────────────────────────────────────────────────────────────────
 
-  useEffect(() => {
-    let result = queries;
-
-    // Filter by Tab
-    if (activeTab === "open") {
-      result = result.filter((q) => q.status !== "resolved");
-    } else if (activeTab === "resolved") {
-      result = result.filter((q) => q.status === "resolved");
+  const loadQueries = useCallback(async () => {
+    setLoading(true);
+    setError(null);
+    try {
+      const res = await fetchQueries({
+        page,
+        limit,
+        status: TAB_STATUS_MAP[activeTab],
+        search: debouncedSearch,
+      });
+      console.log("query data: ", res.data);
+      const data = res;
+      setQueries(data.data || []);
+      setTotalPages(data.pagination?.totalPages || 1);
+      setTotalCount(data.pagination?.total || 0);
+    } catch (err) {
+      console.error("Failed to fetch queries:", err);
+      setError("Failed to load support queries. Please try again.");
+      setQueries([]);
+      setTotalCount(0);
+    } finally {
+      setLoading(false);
     }
+  }, [page, activeTab, debouncedSearch]);
 
-    // Filter by Search
-    if (searchTerm) {
-      const lower = searchTerm.toLowerCase();
-      result = result.filter(
-        (q) =>
-          q.subject.toLowerCase().includes(lower) ||
-          q.order_number?.toLowerCase().includes(lower) ||
-          q.id.toLowerCase().includes(lower),
-      );
-    }
+  useEffect(() => {
+    loadQueries();
+  }, [loadQueries]);
 
-    setFilteredQueries(result);
-  }, [activeTab, searchTerm, queries]);
+  // Reset to page 1 when tab or search changes
+  useEffect(() => {
+    setPage(1);
+  }, [activeTab, debouncedSearch]);
+
+  // ── Column Definitions ────────────────────────────────────────────────────
 
   const columns = [
     {
       header: "TICKET ID",
-      accessor: "id",
+      accessor: "ticketId",
       className: "w-[120px]",
       render: (row) => (
         <span
           className="font-bold text-slate-900 cursor-pointer hover:text-bukizz-orange"
           onClick={() => navigate(`/orderqueries/${row.id}`)}
         >
-          #{row.id}
+          {row.ticketId}
         </span>
       ),
     },
@@ -92,23 +120,23 @@ const QueryListPage = () => {
             {row.subject}
           </div>
           <div className="text-xs text-slate-500 mt-0.5">
-            Customer: {row.customer_name}
+            Customer: {row.customer?.name || "—"}
           </div>
         </div>
       ),
     },
     {
       header: "ORDER #",
-      accessor: "order_number",
+      accessor: "order",
       render: (row) => (
         <span
           className="font-bold text-orange-500 hover:text-orange-600 cursor-pointer"
           onClick={(e) => {
             e.stopPropagation();
-            navigate(`/orders/${row.order_id}`);
+            // Navigate to order if we can — orderId not in list response, so just display
           }}
         >
-          {row.order_number}
+          {row.order?.orderNumber || "—"}
         </span>
       ),
     },
@@ -116,6 +144,7 @@ const QueryListPage = () => {
       header: "PRIORITY",
       accessor: "priority",
       render: (row) => {
+        const p = (row.priority || "").toLowerCase();
         const styles = {
           high: "bg-red-100 text-red-700",
           medium: "bg-orange-100 text-orange-700",
@@ -123,7 +152,7 @@ const QueryListPage = () => {
         };
         return (
           <span
-            className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${styles[row.priority]}`}
+            className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${styles[p] || "bg-slate-100 text-slate-600"}`}
           >
             {row.priority}
           </span>
@@ -134,6 +163,7 @@ const QueryListPage = () => {
       header: "STATUS",
       accessor: "status",
       render: (row) => {
+        const s = (row.status || "").toLowerCase();
         const styles = {
           open: "text-slate-700",
           in_progress: "text-slate-700",
@@ -141,19 +171,19 @@ const QueryListPage = () => {
         };
         return (
           <span
-            className={`text-sm font-medium capitalize ${styles[row.status]}`}
+            className={`text-sm font-medium capitalize ${styles[s] || "text-slate-600"}`}
           >
-            {row.status === "in_progress" ? "In Progress" : row.status}
+            {row.status}
           </span>
         );
       },
     },
     {
       header: "CREATED AT",
-      accessor: "created_at",
+      accessor: "createdAt",
       className: "text-right",
       render: (row) => {
-        const date = new Date(row.created_at);
+        const date = new Date(row.createdAt);
         return (
           <span className="text-sm text-slate-500">
             {date.toLocaleDateString("en-US", {
@@ -170,6 +200,8 @@ const QueryListPage = () => {
       },
     },
   ];
+
+  // ── Render ────────────────────────────────────────────────────────────────
 
   return (
     <div className="p-8 bg-[#F8F9FC] min-h-screen font-sans">
@@ -188,23 +220,17 @@ const QueryListPage = () => {
         </div>
 
         <div className="flex items-center gap-4">
-          {/* Notif Bell Placeholder */}
-          <button className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors">
-            <span className="absolute top-2 right-2.5 w-2 h-2 bg-red-500 rounded-full border-2 border-[#F8F9FC]"></span>
-            <svg
-              xmlns="http://www.w3.org/2000/svg"
-              width="20"
-              height="20"
-              viewBox="0 0 24 24"
-              fill="none"
-              stroke="currentColor"
-              strokeWidth="2"
-              strokeLinecap="round"
-              strokeLinejoin="round"
-            >
-              <path d="M6 8a6 6 0 0 1 12 0c0 7 3 9 3 9H3s3-2 3-9" />
-              <path d="M10.3 21a1.94 1.94 0 0 0 3.4 0" />
-            </svg>
+          {/* Refresh */}
+          <button
+            onClick={loadQueries}
+            disabled={loading}
+            className="relative p-2 text-slate-400 hover:text-slate-600 transition-colors"
+            title="Refresh"
+          >
+            <RefreshCw
+              size={20}
+              className={loading ? "animate-spin" : ""}
+            />
           </button>
 
           <Button className="bg-bukizz-orange hover:bg-orange-600 text-white font-bold px-6 py-2.5 shadow-md shadow-orange-200">
@@ -242,19 +268,69 @@ const QueryListPage = () => {
         </div>
       </div>
 
+      {/* Error Banner */}
+      {error && (
+        <div className="bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm text-red-700 flex items-center gap-2 mb-6">
+          <AlertCircle size={16} />
+          <span>{error}</span>
+          <button
+            onClick={() => setError(null)}
+            className="ml-auto font-medium"
+          >
+            Dismiss
+          </button>
+        </div>
+      )}
+
       {/* Table */}
-      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-8">
-        <DataTable
-          columns={columns}
-          data={filteredQueries}
-          pagination
-          itemsPerPage={8} // Matches designs usually showing fewer items but clearer
-          onRowClick={(row) => navigate(`/orderqueries/${row.id}`)}
-        />
+      <div className="bg-white rounded-xl shadow-sm border border-slate-200 overflow-hidden mb-2">
+        {loading ? (
+          <div className="flex flex-col items-center justify-center py-20 text-slate-500 text-sm">
+            <RefreshCw className="h-6 w-6 animate-spin text-bukizz-orange mb-3" />
+            Loading queries…
+          </div>
+        ) : (
+          <DataTable
+            columns={columns}
+            data={queries}
+            emptyMessage="No support queries found."
+            onRowClick={(row) => navigate(`/orderqueries/${row.id}`)}
+          />
+        )}
+
+        {/* Server-side Pagination */}
+        {!loading && queries.length > 0 && (
+          <div className="flex items-center justify-between border-t border-slate-100 bg-slate-50 px-6 py-4">
+            <div className="text-sm text-slate-600">
+              {totalCount} total queries
+            </div>
+            <div className="flex items-center gap-3 text-sm text-slate-600">
+              <span>
+                Page {page} of {totalPages}
+              </span>
+              <div className="flex gap-1">
+                <button
+                  disabled={page <= 1}
+                  onClick={() => setPage((p) => p - 1)}
+                  className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Prev
+                </button>
+                <button
+                  disabled={page >= totalPages}
+                  onClick={() => setPage((p) => p + 1)}
+                  className="px-3 py-1.5 text-sm border border-slate-200 rounded-lg hover:bg-slate-100 disabled:opacity-40 disabled:cursor-not-allowed transition-colors"
+                >
+                  Next
+                </button>
+              </div>
+            </div>
+          </div>
+        )}
       </div>
 
       {/* Bottom Stats Cards */}
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-6">
+      <div className="grid grid-cols-1 md:grid-cols-3 gap-6 mt-8">
         {/* Unassigned Tickets */}
         <div className="bg-white p-6 rounded-xl border border-slate-200 shadow-sm flex items-center gap-5">
           <div className="w-12 h-12 rounded-full bg-orange-100 flex items-center justify-center text-orange-500">
