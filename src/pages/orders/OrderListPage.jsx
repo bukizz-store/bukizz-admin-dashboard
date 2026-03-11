@@ -491,7 +491,8 @@ const OrderListPage = () => {
     setWarehousesLoading(true);
     try {
       const res = await fetchWarehousesByRetailer(retailerId);
-      const list = res.data || res;
+      const list = res.data.warehouses ;
+      console.log("warehouses: ", list);
       setWarehouses(Array.isArray(list) ? list : []);
     } catch {
       setWarehouses([]);
