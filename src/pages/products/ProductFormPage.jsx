@@ -40,6 +40,7 @@ const ProductFormPage = () => {
   const [grade, setGrade] = useState("");
   const [isMandatory, setIsMandatory] = useState(false);
   const [schoolProductType, setSchoolProductType] = useState("bookset"); // 'bookset' | 'uniform' | 'stationary'
+  const [schoolCategory, setSchoolCategory] = useState(null); // Auto-resolved category for school products
 
   // Section B: Options & Variants
   const [productOptions, setProductOptions] = useState([]); // [{ id: 1, name: 'Size', values: ['S', 'M'] }]
@@ -94,6 +95,10 @@ const ProductFormPage = () => {
           // Categories
           if (product.categories && product.categories.length > 0) {
             setCategory(product.categories);
+            // Also set schoolCategory for school products so it's preserved on save
+            if (product.productType !== "general") {
+              setSchoolCategory(product.categories[0]);
+            }
           }
 
           // School Data
@@ -166,6 +171,43 @@ const ProductFormPage = () => {
 
     fetchProduct();
   }, [id, navigate, toast]);
+
+  // --- Auto-resolve school subcategory when schoolProductType changes ---
+  useEffect(() => {
+    if (productType !== "school") return;
+
+    const resolveSchoolCategory = async () => {
+      try {
+        // Step 1: Fetch root categories with schoolCat=true
+        const rootRes = await api.get("/categories", {
+          params: { rootOnly: true, schoolCat: true },
+        });
+        const rootCats = rootRes.data?.data?.categories || rootRes.data?.data || [];
+        const schoolRoot = rootCats.find(
+          (c) => c.name?.toLowerCase() === "school"
+        );
+        if (!schoolRoot) return;
+
+        // Step 2: Fetch subcategories of the School root
+        const subRes = await api.get("/categories", {
+          params: { parentId: schoolRoot.id, schoolCat: true },
+        });
+        const subCats = subRes.data?.data?.categories || subRes.data?.data || [];
+
+        // Step 3: Match the subcategory to the selected schoolProductType
+        const matched = subCats.find(
+          (c) => c.name?.toLowerCase() === schoolProductType?.toLowerCase()
+        );
+        if (matched) {
+          setSchoolCategory({ id: matched.id, label: matched.name });
+        }
+      } catch (error) {
+        console.error("Failed to resolve school category:", error);
+      }
+    };
+
+    resolveSchoolCategory();
+  }, [productType, schoolProductType]);
 
   // --- Fetch Category Attributes when category changes ---
   useEffect(() => {
@@ -610,7 +652,9 @@ const ProductFormPage = () => {
         categories:
           productType === "general" && category.length > 0
             ? category.map((c) => ({ id: c.id }))
-            : [],
+            : productType === "school" && schoolCategory
+              ? [{ id: schoolCategory.id }]
+              : [],
 
         // --- SCHOOL DATA ---
         schoolData:

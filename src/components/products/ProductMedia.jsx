@@ -7,15 +7,12 @@ const ProductMedia = ({ images, setImages }) => {
       <h2 className="text-lg font-bold text-slate-800 mb-4">Product Images</h2>
       <ImageUpload
         multiple
+        maxImages={10}
         label="Upload Images"
         onChange={(newImages) => setImages(newImages)}
         className="mb-4"
         values={images}
       />
-      <div className="text-xs text-slate-400">
-        Drag and drop to reorder. The first image will be the main thumbnail.
-        (Implementation pending in ImageUpload)
-      </div>
     </div>
   );
 };
