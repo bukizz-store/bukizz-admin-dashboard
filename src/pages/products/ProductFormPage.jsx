@@ -10,6 +10,7 @@ import ProductVariants from "../../components/products/ProductVariants";
 import ProductMedia from "../../components/products/ProductMedia";
 import KeyValueManager from "../../components/products/KeyValueManager";
 import MetadataForm from "../../components/products/MetadataForm";
+import RichTextEditor from "../../components/ui/RichTextEditor";
 
 const ProductFormPage = () => {
   const navigate = useNavigate();
@@ -59,11 +60,12 @@ const ProductFormPage = () => {
 
   // Section F: Customer Message
   const [customerMessage, setCustomerMessage] = useState({
-    type: "none", // 'none' | 'warning' | 'suggestion' | 'advertisement'
+    type: "none", // 'none' | 'warning' | 'suggestion' | 'advertisement' | 'other'
     text: "",
     image: null,
     imageUrl: ""
   });
+  const [customMessageType, setCustomMessageType] = useState("");
 
   // --- Fetch Data for Editing ---
   useEffect(() => {
@@ -169,12 +171,20 @@ const ProductFormPage = () => {
               product.metadata.categoryAttributes || product.metadata,
             );
             if (product.metadata.customerMessage) {
+              const knownTypes = ['none', 'warning', 'suggestion', 'advertisement'];
+              const loadedType = product.metadata.customerMessage.type || "none";
+              const isOther = !knownTypes.includes(loadedType);
+
               setCustomerMessage({
-                type: product.metadata.customerMessage.type || "none",
+                type: isOther ? 'other' : loadedType,
                 text: product.metadata.customerMessage.text || "",
                 image: null,
                 imageUrl: product.metadata.customerMessage.imageUrl || ""
               });
+              
+              if (isOther) {
+                setCustomMessageType(loadedType);
+              }
             }
           }
         }
@@ -508,8 +518,8 @@ const ProductFormPage = () => {
         "At least one category is required for general products",
       );
 
-    if (customerMessage.type !== "none" && !customerMessage.text.trim()) {
-      return toast.error("Customer message text is required if a message type is selected.");
+    if (customerMessage.type === "other" && !customMessageType.trim()) {
+      return toast.error("Please specify the custom message type.");
     }
 
     setIsSaving(true);
@@ -608,7 +618,7 @@ const ProductFormPage = () => {
             categoryAttributes: { ...metadata },
             compare_price: Number(formData.compareAtPrice), // compareAtPrice of highest discount variant
             customerMessage: {
-              type: customerMessage.type,
+              type: customerMessage.type === 'other' ? customMessageType.trim() : customerMessage.type,
               text: customerMessage.text,
               imageUrl: finalCustomerMessageImageUrl
             }
@@ -795,18 +805,30 @@ const ProductFormPage = () => {
                     <option value="warning">Warning</option>
                     <option value="suggestion">Suggestion</option>
                     <option value="advertisement">Advertisement</option>
+                    <option value="other">Other (Custom)</option>
                   </select>
                </div>
+               
+               {customerMessage.type === "other" && (
+                 <div>
+                    <label className="block text-sm font-medium text-slate-700 mb-1">Custom Message Type</label>
+                    <input
+                      type="text"
+                      value={customMessageType}
+                      onChange={(e) => setCustomMessageType(e.target.value)}
+                      placeholder="e.g. Special Offer, Notice"
+                      className="w-full rounded-lg border border-slate-300 px-4 py-2.5 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
+                    />
+                 </div>
+               )}
                
                {customerMessage.type !== "none" && (
                  <>
                    <div>
-                      <label className="block text-sm font-medium text-slate-700 mb-1">Message Text <span className="text-red-500">*</span></label>
-                      <textarea
+                      <label className="block text-sm font-medium text-slate-700 mb-1">Message Text (Optional)</label>
+                      <RichTextEditor
                         value={customerMessage.text}
-                        onChange={(e) => setCustomerMessage(prev => ({...prev, text: e.target.value}))}
-                        className="w-full rounded-lg border border-slate-300 px-4 py-3 text-sm focus:border-blue-500 focus:ring-1 focus:ring-blue-500 outline-none"
-                        rows="3"
+                        onChange={(val) => setCustomerMessage(prev => ({...prev, text: val}))}
                         placeholder="Enter the message to display to the customer..."
                       />
                    </div>
