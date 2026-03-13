@@ -830,6 +830,7 @@ const ProductFormPage = () => {
                         value={customerMessage.text}
                         onChange={(val) => setCustomerMessage(prev => ({...prev, text: val}))}
                         placeholder="Enter the message to display to the customer..."
+                        returnHtml={true}
                       />
                    </div>
                    <div>
