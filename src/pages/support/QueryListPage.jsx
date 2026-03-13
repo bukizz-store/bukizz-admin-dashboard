@@ -98,14 +98,30 @@ const QueryListPage = () => {
       header: "TICKET ID",
       accessor: "ticketId",
       className: "w-[120px]",
-      render: (row) => (
-        <span
-          className="font-bold text-slate-900 cursor-pointer hover:text-bukizz-orange"
-          onClick={() => navigate(`/orderqueries/${row.id}`)}
-        >
-          {row.ticketId}
-        </span>
-      ),
+      render: (row) => {
+        const date = new Date(row.createdAt);
+        return (
+          <div
+            className="cursor-pointer group flex flex-col"
+            onClick={() => navigate(`/orderqueries/${row.id}`)}
+          >
+            <span className="font-bold text-slate-900 group-hover:text-bukizz-orange transition-colors">
+              {row.ticketId}
+            </span>
+            <span className="text-xs text-slate-500 mt-0.5">
+              {date.toLocaleDateString("en-US", {
+                month: "short",
+                day: "numeric",
+              })}
+              ,{" "}
+              {date.toLocaleTimeString("en-US", {
+                hour: "2-digit",
+                minute: "2-digit",
+              })}
+            </span>
+          </div>
+        );
+      },
     },
     {
       header: "SUBJECT",
@@ -114,7 +130,7 @@ const QueryListPage = () => {
       render: (row) => (
         <div
           onClick={() => navigate(`/orderqueries/${row.id}`)}
-          className="cursor-pointer group"
+          className="cursor-pointer group flex flex-col justify-center min-h-12"
         >
           <div className="font-bold text-slate-900 group-hover:text-bukizz-orange transition-colors">
             {row.subject}
@@ -128,40 +144,43 @@ const QueryListPage = () => {
     {
       header: "ORDER #",
       accessor: "order",
-      render: (row) => (
-        <span
-          className="font-bold text-orange-500 hover:text-orange-600 cursor-pointer"
-          onClick={(e) => {
-            e.stopPropagation();
-            // Navigate to order if we can — orderId not in list response, so just display
-          }}
-        >
-          {row.order?.orderNumber || "—"}
-        </span>
-      ),
-    },
-    {
-      header: "PRIORITY",
-      accessor: "priority",
+      className: "w-[240px]",
       render: (row) => {
-        const p = (row.priority || "").toLowerCase();
-        const styles = {
-          high: "bg-red-100 text-red-700",
-          medium: "bg-orange-100 text-orange-700",
-          low: "bg-blue-100 text-blue-700",
-        };
+        const order = row.order;
+        const items = order?.items || [];
+        const productInfo = items.length > 0 
+          ? items.map(i => `${i.title}${i.variant ? ` (${i.variant})` : ''}`).join(', ')
+          : null;
+        const mainDispatchId = order?.dispatchId || (items[0]?.dispatchId);
+
         return (
-          <span
-            className={`px-3 py-1 rounded-full text-xs font-bold uppercase ${styles[p] || "bg-slate-100 text-slate-600"}`}
-          >
-            {row.priority}
-          </span>
+          <div className="flex flex-col text-sm">
+            <span
+              className="font-bold text-orange-500 hover:text-orange-600 cursor-pointer"
+              onClick={(e) => {
+                e.stopPropagation();
+              }}
+            >
+              Order: {order?.orderNumber || "—"}
+            </span>
+            {mainDispatchId && (
+              <span className="text-xs text-slate-500 mt-0.5">
+                Dispatch: <span className="font-medium text-slate-700">{mainDispatchId}</span>
+              </span>
+            )}
+            {productInfo && (
+              <span className="text-xs text-slate-500 mt-0.5 truncate max-w-55" title={productInfo}>
+                Product: {productInfo}
+              </span>
+            )}
+          </div>
         );
       },
     },
     {
       header: "STATUS",
       accessor: "status",
+      className: "w-[120px]",
       render: (row) => {
         const s = (row.status || "").toLowerCase();
         const styles = {
@@ -174,27 +193,6 @@ const QueryListPage = () => {
             className={`text-sm font-medium capitalize ${styles[s] || "text-slate-600"}`}
           >
             {row.status}
-          </span>
-        );
-      },
-    },
-    {
-      header: "CREATED AT",
-      accessor: "createdAt",
-      className: "text-right",
-      render: (row) => {
-        const date = new Date(row.createdAt);
-        return (
-          <span className="text-sm text-slate-500">
-            {date.toLocaleDateString("en-US", {
-              month: "short",
-              day: "numeric",
-            })}
-            ,{" "}
-            {date.toLocaleTimeString("en-US", {
-              hour: "2-digit",
-              minute: "2-digit",
-            })}
           </span>
         );
       },
