@@ -151,6 +151,11 @@ const QueryListPage = () => {
         const productInfo = items.length > 0 
           ? items.map(i => `${i.title}${i.variant ? ` (${i.variant})` : ''}`).join(', ')
           : null;
+        
+        // Find the first warehouse and retailer to display (if any exist)
+        const firstWarehouse = items.find(i => i.warehouseName)?.warehouseName;
+        const firstRetailer = items.find(i => i.retailerName)?.retailerName;
+        
         const mainDispatchId = order?.dispatchId || (items[0]?.dispatchId);
 
         return (
@@ -171,6 +176,12 @@ const QueryListPage = () => {
             {productInfo && (
               <span className="text-xs text-slate-500 mt-0.5 truncate max-w-55" title={productInfo}>
                 Product: {productInfo}
+              </span>
+            )}
+            {(firstWarehouse || firstRetailer) && (
+              <span className="text-[10px] text-slate-400 mt-1 flex flex-col gap-0.5">
+                {firstWarehouse && <span>Warehouse: <span className="text-slate-600 font-medium">{firstWarehouse}</span></span>}
+                {firstRetailer && <span>Retailer: <span className="text-slate-600 font-medium">{firstRetailer}</span></span>}
               </span>
             )}
           </div>
