@@ -11,6 +11,7 @@ import ProductMedia from "../../components/products/ProductMedia";
 import KeyValueManager from "../../components/products/KeyValueManager";
 import MetadataForm from "../../components/products/MetadataForm";
 import RichTextEditor from "../../components/ui/RichTextEditor";
+import { PAYMENT_METHODS } from "../../data/paymentMethods";
 
 const ProductFormPage = () => {
   const navigate = useNavigate();
@@ -66,6 +67,12 @@ const ProductFormPage = () => {
     imageUrl: ""
   });
   const [customMessageType, setCustomMessageType] = useState("");
+
+  // Section G: Admin Settings (edit mode only)
+  const [paymentMethods, setPaymentMethods] = useState(
+    PAYMENT_METHODS.map((pm) => pm.value)
+  );
+  const [variantCommissions, setVariantCommissions] = useState([]);
 
   // --- Fetch Data for Editing ---
   useEffect(() => {
@@ -186,6 +193,16 @@ const ProductFormPage = () => {
                 setCustomMessageType(loadedType);
               }
             }
+          }
+
+          // 9. Payment Methods
+          if (product.paymentMethods && product.paymentMethods.length > 0) {
+            setPaymentMethods(product.paymentMethods);
+          }
+
+          // 10. Variant Commissions
+          if (product.variantCommissions && product.variantCommissions.length > 0) {
+            setVariantCommissions(product.variantCommissions);
           }
         }
       } catch (error) {
@@ -718,6 +735,16 @@ const ProductFormPage = () => {
                 mandatory: isMandatory,
               }
             : null,
+
+        // --- PAYMENT METHODS ---
+        paymentMethods: paymentMethods,
+
+        // --- VARIANT COMMISSIONS ---
+        variantCommissions: variantCommissions.map((vc) => ({
+          variantId: vc.variant_id || vc.variantId,
+          commissionType: vc.commission_type || vc.commissionType,
+          commissionValue: Number(vc.commission_value ?? vc.commissionValue ?? 0),
+        })),
       };
 
       // console.log("Submitting Payload:", payload);

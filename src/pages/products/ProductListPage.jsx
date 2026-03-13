@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Loader2, Trash2, Edit, LayoutGrid, List } from "lucide-react";
+import { Plus, Loader2, Trash2, Edit, LayoutGrid, List, Check, X, CreditCard, Percent } from "lucide-react";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -9,7 +9,8 @@ import {
   Pagination,
   StatusBadge,
 } from "../../components/common";
-import { Button, ConfirmationModal, Tooltip } from "../../components/ui";
+import { Button, ConfirmationModal, Tooltip, Input } from "../../components/ui";
+import { PAYMENT_METHODS } from "../../data/paymentMethods";
 
 const ProductListPage = () => {
   const toast = useToast();
@@ -37,6 +38,17 @@ const ProductListPage = () => {
   const [searchTerm, setSearchTerm] = useState(currentSearch);
   const [viewMode, setViewMode] = useState("list"); // 'list' | 'grid'
   const [togglingIds, setTogglingIds] = useState(new Set()); // Track products being toggled
+
+  // Approve Modal State
+  const [showApproveModal, setShowApproveModal] = useState(false);
+  const [approveProduct, setApproveProduct] = useState(null);
+  const [approveLoading, setApproveLoading] = useState(false);
+  const [approveDeliveryCharge, setApproveDeliveryCharge] = useState("");
+  const [approveCommissions, setApproveCommissions] = useState([]);
+  const [approvePaymentMethods, setApprovePaymentMethods] = useState(
+    PAYMENT_METHODS.map((pm) => pm.value)
+  );
+  const [isApproving, setIsApproving] = useState(false);
 
   // Sync search term
   useEffect(() => {
@@ -179,6 +191,103 @@ const ProductListPage = () => {
     }
   };
 
+  // --- Approve Flow ---
+  const getVariantDisplayName = (variant) => {
+    const parts = [];
+    if (variant.option_value_1_ref?.value) parts.push(variant.option_value_1_ref.value);
+    if (variant.option_value_2_ref?.value) parts.push(variant.option_value_2_ref.value);
+    if (variant.option_value_3_ref?.value) parts.push(variant.option_value_3_ref.value);
+    return parts.length > 0 ? parts.join(" / ") : variant.sku || "Default Variant";
+  };
+
+  const handleOpenApprove = async (product) => {
+    setApproveLoading(true);
+    setShowApproveModal(true);
+    setApproveDeliveryCharge("");
+    setApprovePaymentMethods(PAYMENT_METHODS.map((pm) => pm.value));
+
+    try {
+      // Fetch full product to get variants
+      const response = await api.get(`/products/${product.id}`);
+      if (response.data?.success) {
+        const data = response.data.data.product;
+        setApproveProduct(data);
+        const existingCommissions = data.variantCommissions || [];
+        setApproveCommissions(
+          (data.variants || []).map((v) => {
+            const existing = existingCommissions.find((ec) => ec.variant_id === v.id);
+            return {
+              variantId: v.id,
+              variantName: getVariantDisplayName(v),
+              commissionType: existing?.commission_type || "percentage",
+              commissionValue: existing?.commission_value || "",
+            };
+          })
+        );
+        if (data.paymentMethods && data.paymentMethods.length > 0) {
+          setApprovePaymentMethods(data.paymentMethods);
+        }
+      }
+    } catch (error) {
+      console.error("Failed to fetch product for approval:", error);
+      toast.error("Failed to load product details");
+      setShowApproveModal(false);
+    } finally {
+      setApproveLoading(false);
+    }
+  };
+
+  const handleConfirmApprove = async () => {
+    if (!approveProduct) return;
+    if (!approveDeliveryCharge && approveDeliveryCharge !== 0) {
+      return toast.error("Please enter a delivery charge");
+    }
+    const hasEmpty = approveCommissions.some((vc) => vc.commissionValue === "" || vc.commissionValue === undefined);
+    if (hasEmpty) return toast.error("Please set commission for all variants");
+    if (approvePaymentMethods.length === 0) return toast.error("Select at least one payment method");
+
+    setIsApproving(true);
+    try {
+      const response = await api.patch(`/products/${approveProduct.id}/activate`, {
+        deliveryCharge: Number(approveDeliveryCharge),
+        variantCommissions: approveCommissions.map((vc) => ({
+          variantId: vc.variantId,
+          commissionType: vc.commissionType,
+          commissionValue: Number(vc.commissionValue),
+        })),
+        paymentMethods: approvePaymentMethods,
+      });
+
+      if (response.data?.success) {
+        toast.success("Product approved successfully");
+        setProducts((prev) =>
+          prev.map((p) => (p.id === approveProduct.id ? { ...p, isActive: true } : p))
+        );
+        setShowApproveModal(false);
+        setApproveProduct(null);
+      }
+    } catch (error) {
+      console.error("Failed to approve product:", error);
+      toast.error(error.response?.data?.message || "Failed to approve product");
+    } finally {
+      setIsApproving(false);
+    }
+  };
+
+  const updateApproveCommission = (index, field, value) => {
+    setApproveCommissions((prev) => {
+      const updated = [...prev];
+      updated[index] = { ...updated[index], [field]: value };
+      return updated;
+    });
+  };
+
+  const toggleApprovePayment = (method) => {
+    setApprovePaymentMethods((prev) =>
+      prev.includes(method) ? prev.filter((m) => m !== method) : [...prev, method]
+    );
+  };
+
   // 5. Columns
   const columns = [
     {
@@ -293,6 +402,16 @@ const ProductListPage = () => {
           className="flex items-center justify-end gap-2"
           onClick={(e) => e.stopPropagation()}
         >
+          {!row.isActive && (
+            <Tooltip content="Approve Product">
+              <button
+                onClick={() => handleOpenApprove(row)}
+                className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+              >
+                <Check size={18} />
+              </button>
+            </Tooltip>
+          )}
           <Tooltip content="Edit Product">
             <button
               onClick={() => navigate(`/products/edit/${row.id}`)}
@@ -472,6 +591,15 @@ const ProductListPage = () => {
                       className="flex gap-1"
                       onClick={(e) => e.stopPropagation()}
                     >
+                      {!product.isActive && (
+                        <button
+                          onClick={() => handleOpenApprove(product)}
+                          className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors"
+                          title="Approve"
+                        >
+                          <Check size={16} />
+                        </button>
+                      )}
                       <button
                         onClick={() => navigate(`/products/edit/${product.id}`)}
                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
@@ -515,6 +643,159 @@ const ProductListPage = () => {
         confirmText={isDeleting ? "Deleting..." : "Delete Product"}
         isLoading={isDeleting}
       />
+
+      {/* Approve Modal */}
+      {showApproveModal && (
+        <div className="fixed inset-0 bg-black/50 flex items-center justify-center z-50 p-4">
+          <div className="bg-white rounded-xl w-full max-w-lg shadow-xl max-h-[85vh] overflow-y-auto">
+            <div className="sticky top-0 bg-white p-6 pb-4 border-b border-slate-100 z-10">
+              <div className="flex justify-between items-center">
+                <h3 className="text-lg font-bold text-slate-800">
+                  Approve Product
+                </h3>
+                <button
+                  onClick={() => { setShowApproveModal(false); setApproveProduct(null); }}
+                  className="text-slate-400 hover:text-slate-600"
+                >
+                  <X size={20} />
+                </button>
+              </div>
+              {approveProduct && (
+                <p className="text-sm text-slate-500 mt-1 truncate">
+                  {approveProduct.title}
+                </p>
+              )}
+            </div>
+
+            {approveLoading ? (
+              <div className="flex items-center justify-center py-16">
+                <Loader2 className="animate-spin w-8 h-8 text-bukizz-orange" />
+                <span className="ml-3 text-sm text-slate-500">Loading product details...</span>
+              </div>
+            ) : (
+              <>
+                <div className="p-6 space-y-6">
+                  {/* Delivery Charge */}
+                  <Input
+                    label="Delivery Charge (₹)"
+                    type="number"
+                    placeholder="e.g. 50"
+                    value={approveDeliveryCharge}
+                    onChange={(e) => setApproveDeliveryCharge(e.target.value)}
+                  />
+
+                  {/* Variant Commissions */}
+                  {approveCommissions.length > 0 && (
+                    <div className="space-y-3">
+                      <label className="block text-sm font-semibold text-slate-700">Variant Commissions</label>
+                      <div className="bg-slate-50 rounded-lg border border-slate-200 overflow-hidden">
+                        <table className="w-full text-sm">
+                          <thead className="bg-slate-100 text-slate-600 text-xs uppercase">
+                            <tr>
+                              <th className="text-left py-2 px-3">Variant</th>
+                              <th className="text-left py-2 px-3">Type</th>
+                              <th className="text-left py-2 px-3">Value</th>
+                            </tr>
+                          </thead>
+                          <tbody className="divide-y divide-slate-100">
+                            {approveCommissions.map((vc, idx) => (
+                              <tr key={vc.variantId} className="hover:bg-slate-50/50">
+                                <td className="py-2 px-3 text-slate-800 font-medium text-xs">{vc.variantName}</td>
+                                <td className="py-2 px-3">
+                                  <select
+                                    value={vc.commissionType}
+                                    onChange={(e) => updateApproveCommission(idx, "commissionType", e.target.value)}
+                                    className="text-xs border border-slate-200 rounded-md px-2 py-1.5 bg-white focus:outline-none focus:ring-1 focus:ring-bukizz-orange"
+                                  >
+                                    <option value="percentage">Percentage (%)</option>
+                                    <option value="flat">Flat (₹)</option>
+                                  </select>
+                                </td>
+                                <td className="py-2 px-3">
+                                  <div className="flex items-center gap-1">
+                                    {vc.commissionType === "percentage" ? (
+                                      <Percent size={12} className="text-slate-400" />
+                                    ) : (
+                                      <span className="text-xs text-slate-400">₹</span>
+                                    )}
+                                    <input
+                                      type="number"
+                                      min="0"
+                                      step={vc.commissionType === "percentage" ? "0.1" : "1"}
+                                      value={vc.commissionValue}
+                                      onChange={(e) => updateApproveCommission(idx, "commissionValue", e.target.value)}
+                                      placeholder="0"
+                                      className="w-20 text-xs border border-slate-200 rounded-md px-2 py-1.5 focus:outline-none focus:ring-1 focus:ring-bukizz-orange"
+                                    />
+                                  </div>
+                                </td>
+                              </tr>
+                            ))}
+                          </tbody>
+                        </table>
+                      </div>
+                    </div>
+                  )}
+
+                  {/* Payment Methods */}
+                  <div className="space-y-3">
+                    <label className="block text-sm font-semibold text-slate-700">Allowed Payment Methods</label>
+                    <div className="flex flex-wrap gap-3">
+                      {PAYMENT_METHODS.map((pm) => (
+                        <label
+                          key={pm.value}
+                          className={`flex items-center gap-2 px-4 py-2.5 rounded-lg border cursor-pointer transition-all text-sm ${
+                            approvePaymentMethods.includes(pm.value)
+                              ? "bg-orange-50 border-bukizz-orange text-orange-700 ring-1 ring-bukizz-orange/30"
+                              : "bg-white border-slate-200 text-slate-600 hover:border-slate-300"
+                          }`}
+                        >
+                          <input
+                            type="checkbox"
+                            checked={approvePaymentMethods.includes(pm.value)}
+                            onChange={() => toggleApprovePayment(pm.value)}
+                            className="sr-only"
+                          />
+                          <div
+                            className={`w-4 h-4 rounded border flex items-center justify-center shrink-0 ${
+                              approvePaymentMethods.includes(pm.value)
+                                ? "bg-bukizz-orange border-bukizz-orange"
+                                : "border-slate-300 bg-white"
+                            }`}
+                          >
+                            {approvePaymentMethods.includes(pm.value) && (
+                              <Check size={10} className="text-white" />
+                            )}
+                          </div>
+                          <CreditCard size={14} />
+                          {pm.label}
+                        </label>
+                      ))}
+                    </div>
+                  </div>
+                </div>
+
+                <div className="sticky bottom-0 bg-white p-6 pt-4 border-t border-slate-100 flex justify-end gap-3">
+                  <button
+                    onClick={() => { setShowApproveModal(false); setApproveProduct(null); }}
+                    className="px-4 py-2 text-sm text-slate-600 hover:text-slate-800"
+                  >
+                    Cancel
+                  </button>
+                  <Button
+                    onClick={handleConfirmApprove}
+                    disabled={isApproving}
+                    className="bg-green-600 hover:bg-green-700 text-white"
+                  >
+                    {isApproving && <Loader2 size={16} className="animate-spin mr-2" />}
+                    Confirm Approval
+                  </Button>
+                </div>
+              </>
+            )}
+          </div>
+        </div>
+      )}
     </div>
   );
 };
