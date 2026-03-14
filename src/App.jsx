@@ -8,6 +8,7 @@ import CategoryDetailPage from "./pages/categories/CategoryDetailPage";
 import SchoolsListPage from "./pages/schools/SchoolsListPage";
 import SchoolFormPage from "./pages/schools/SchoolFormPage";
 import SchoolDetailPage from "./pages/schools/SchoolDetailPage";
+import SchoolSortOrderPage from "./pages/schools/SchoolSortOrderPage";
 import RetailersListPage from "./pages/retailers/RetailersListPage";
 import RetailerFormPage from "./pages/retailers/RetailerFormPage";
 import RetailerDetailPage from "./pages/retailers/RetailerDetailPage";
@@ -86,6 +87,7 @@ function App() {
                 />
 
                 {/* Specific Routes for Schools */}
+                <Route path="/schools/sort" element={<SchoolSortOrderPage />} />
                 <Route path="/schools/create" element={<SchoolFormPage />} />
                 <Route path="/schools/edit/:id" element={<SchoolFormPage />} />
                 <Route path="/schools/:id" element={<SchoolDetailPage />} />

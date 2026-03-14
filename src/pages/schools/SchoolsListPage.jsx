@@ -9,6 +9,7 @@ import {
   Eye,
   Pencil,
   Trash2,
+  ListOrdered,
 } from "lucide-react";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
@@ -392,13 +393,22 @@ const SchoolsListPage = () => {
             Manage your network of schools and their product catalogs
           </p>
         </div>
-        <Button
-          variant="primary"
-          icon={Plus}
-          onClick={() => navigate("/schools/create")}
-        >
-          Onboard School
-        </Button>
+        <div className="flex items-center gap-3">
+          <Button
+            variant="outline"
+            icon={ListOrdered}
+            onClick={() => navigate(`/schools/sort?city=${currentCity || "gurugram"}`)}
+          >
+            Manage Sort Order
+          </Button>
+          <Button
+            variant="primary"
+            icon={Plus}
+            onClick={() => navigate("/schools/create")}
+          >
+            Onboard School
+          </Button>
+        </div>
       </div>
 
       {/* Controls */}
