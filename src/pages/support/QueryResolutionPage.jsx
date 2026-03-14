@@ -307,7 +307,7 @@ const QueryResolutionPage = () => {
             <div className="flex-1">
               <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm focus-within:ring-2 focus-within:ring-orange-100 focus-within:border-bukizz-orange transition-all">
                 <textarea
-                  className="w-full p-4 bg-transparent border-none focus:ring-0 text-sm min-h-[140px] resize-none"
+                  className="w-full p-4 bg-transparent border-none focus:ring-0 text-sm min-h-35 resize-none"
                   placeholder="Type your reply here... (Markdown supported)"
                   value={replyText}
                   onChange={(e) => setReplyText(e.target.value)}
@@ -335,10 +335,10 @@ const QueryResolutionPage = () => {
       </div>
 
       {/* Right Panel - Context View */}
-      <div className="w-[360px] bg-[#F8F9FC] flex flex-col shrink-0 p-4 space-y-6 overflow-y-auto">
+      <div className="w-90 bg-[#F8F9FC] flex flex-col shrink-0 p-4 space-y-6 overflow-y-auto">
         {/* Order Context Card */}
         {order.orderNumber && (
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-5">
+          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-4">
             <div className="flex items-center justify-between mb-4">
               <h3 className="text-xs font-extrabold text-slate-400 uppercase tracking-widest">
                 Related Order
@@ -346,7 +346,7 @@ const QueryResolutionPage = () => {
               <span
                 className="text-xs font-bold text-orange-500 cursor-pointer hover:underline"
                 onClick={() => {
-                  // order.id might not be in response, so we show order number
+                  if (order.id) window.open(`/orders/${order.id}`, "_blank");
                 }}
               >
                 View Order
@@ -354,15 +354,15 @@ const QueryResolutionPage = () => {
             </div>
 
             <div className="flex items-center gap-3 mb-4 p-3 bg-slate-50 rounded-xl border border-slate-100">
-              <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600">
+              <div className="w-10 h-10 rounded-lg bg-orange-100 flex items-center justify-center text-orange-600 shrink-0">
                 <ShoppingBag size={20} />
               </div>
-              <div>
-                <p className="text-sm font-bold text-slate-900">
+              <div className="min-w-0">
+                <p className="text-sm font-bold text-slate-900 truncate">
                   {order.orderNumber}
                 </p>
                 <p className="text-xs text-slate-500">
-                  Total: {formatCurrency(order.total)}
+                  Total: {formatCurrency(order.totalAmount || order.total)}
                 </p>
               </div>
             </div>
@@ -373,43 +373,77 @@ const QueryResolutionPage = () => {
                 <p className="text-xs font-bold text-slate-900">
                   Items in this Order
                 </p>
-                {order.items.slice(0, 3).map((item, idx) => (
-                  <div
-                    key={idx}
-                    className="flex gap-3 items-center group cursor-pointer"
-                  >
-                    {item.image ? (
-                      <div className="w-8 h-8 rounded-md bg-white border border-slate-200 p-0.5 flex items-center justify-center overflow-hidden">
-                        <img
-                          src={item.image}
-                          className="w-full h-full object-contain"
-                          alt={item.title || "Item"}
-                          onError={(e) => {
-                            e.target.style.display = "none";
-                          }}
-                        />
+                {order.items.slice(0, 5).map((item, idx) => (
+                  <div key={idx} className="flex flex-col pb-3 border-b border-slate-100 last:border-0 last:pb-0 gap-2">
+                    <div
+                      className="flex gap-3 items-center group cursor-pointer"
+                      onClick={() => {
+                        if (item.productId) window.open(`/products/edit/${item.productId}`, "_blank");
+                      }}
+                    >
+                      {item.image ? (
+                        <div className="w-10 h-10 rounded-md bg-white border border-slate-200 p-0.5 flex items-center justify-center overflow-hidden shrink-0 group-hover:border-orange-200 transition-colors">
+                          <img
+                            src={item.image}
+                            className="w-full h-full object-contain"
+                            alt={item.title || "Item"}
+                            onError={(e) => {
+                              e.target.style.display = "none";
+                            }}
+                          />
+                        </div>
+                      ) : (
+                        <div className="w-10 h-10 rounded-md bg-slate-100 flex items-center justify-center shrink-0 group-hover:bg-orange-50 transition-colors">
+                          <ShoppingBag size={14} className="text-slate-400 group-hover:text-orange-400" />
+                        </div>
+                      )}
+                      <div className="flex-1 min-w-0">
+                        <p className="text-xs font-bold text-slate-700 truncate group-hover:text-orange-600 transition-colors">
+                          {item.title || item.name || `Item ${idx + 1}`}
+                        </p>
+                        <div className="flex items-center justify-between mt-0.5">
+                          {item.quantity && (
+                            <span className="text-[10px] font-medium text-slate-500">
+                              Qty: {item.quantity}
+                            </span>
+                          )}
+                          <span className="text-[10px] font-bold text-slate-700">
+                            {formatCurrency(item.unitPrice || 0)}
+                          </span>
+                        </div>
                       </div>
-                    ) : (
-                      <div className="w-8 h-8 rounded-md bg-slate-100 flex items-center justify-center">
-                        <ShoppingBag size={14} className="text-slate-400" />
+                    </div>
+                    {/* Warehouse & Retailer Context */}
+                    {item.warehouse && (
+                      <div className="flex flex-col gap-1 pl-13">
+                        <p className="text-[10px] font-medium text-slate-500">
+                          Warehouse:{" "}
+                          <span 
+                            className="text-slate-700 hover:text-orange-500 cursor-pointer underline decoration-slate-300 underline-offset-2 transition-colors"
+                            onClick={(e) => { e.stopPropagation(); window.open(`/warehouse/${item.warehouse.id}`, "_blank"); }}
+                          >
+                            {item.warehouse.name}
+                          </span>
+                        </p>
+                        {item.warehouse.retailer && (
+                          <p className="text-[10px] font-medium text-slate-500">
+                            Retailer:{" "}
+                            <span 
+                              className="text-slate-700 hover:text-orange-500 cursor-pointer underline decoration-slate-300 underline-offset-2 transition-colors"
+                              onClick={(e) => { e.stopPropagation(); window.open(`/retailers/${item.warehouse.retailer.id}`, "_blank"); }}
+                            >
+                              {item.warehouse.retailer.name}
+                            </span>
+                          </p>
+                        )}
                       </div>
                     )}
-                    <div className="flex-1 min-w-0">
-                      <p className="text-xs font-medium text-slate-700 truncate group-hover:text-orange-600 transition-colors">
-                        {item.title || item.name || `Item ${idx + 1}`}
-                      </p>
-                      {item.quantity && (
-                        <p className="text-[10px] text-slate-400">
-                          Qty: {item.quantity}
-                        </p>
-                      )}
-                    </div>
                   </div>
                 ))}
-                {order.items.length > 3 && (
-                  <p className="text-xs text-slate-400">
-                    +{order.items.length - 3} more items
-                  </p>
+                {order.items.length > 5 && (
+                  <button className="text-[10px] font-bold text-orange-500 hover:underline w-full text-center py-1 bg-orange-50 rounded-md">
+                    + {order.items.length - 5} MORE ITEMS
+                  </button>
                 )}
               </div>
             )}
@@ -423,38 +457,49 @@ const QueryResolutionPage = () => {
           </h3>
 
           <div className="flex items-center gap-3 mb-6">
-            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg border border-blue-100">
-              {(customer.name || "?").charAt(0)}
+            <div className="w-12 h-12 rounded-full bg-blue-50 text-blue-600 flex items-center justify-center font-bold text-lg border border-blue-100 shrink-0">
+              {(customer.name || "?").charAt(0).toUpperCase()}
             </div>
-            <div>
-              <p className="text-sm font-bold text-slate-900">
+            <div className="min-w-0">
+              <p className="text-sm font-bold text-slate-900 truncate">
                 {customer.name || "—"}
               </p>
-              <p className="text-xs text-slate-400">
-                Joined {formatDate(customer.joinedAt)}
+              <p className="text-[10px] font-medium text-slate-400 truncate">
+                Joined {formatDate(customer.joinedDate || customer.joinedAt)}
               </p>
             </div>
           </div>
 
-          <div className="space-y-3">
+          <div className="space-y-4">
             <div>
               <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">
                 Email
               </p>
-              <p className="text-sm font-medium text-slate-700">
+              <a href={`mailto:${customer.email}`} className="text-sm font-medium text-blue-600 hover:underline break-all">
                 {customer.email || "—"}
-              </p>
+              </a>
             </div>
             <div>
               <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">
+                Phone
+              </p>
+              <a href={`tel:${customer.phone}`} className="text-sm font-medium text-slate-700 hover:text-blue-600 transition-colors">
+                {customer.phone || "—"}
+              </a>
+            </div>
+            <div className="pt-2 border-t border-slate-100">
+              <p className="text-[10px] text-slate-400 font-bold uppercase mb-1">
                 Total Orders
               </p>
-              <p className="text-sm font-medium text-slate-700">
-                {customer.totalOrders ?? "—"} Orders
-                {customer.lifetimeValue != null && (
-                  <> (Lifetime Value: {formatCurrency(customer.lifetimeValue)})</>
-                )}
+              <p className="text-sm font-bold text-slate-700">
+                {customer.totalLifetimeOrders ?? customer.totalOrders ?? "—"}{" "}
+                <span className="font-medium text-slate-500 text-xs">Orders</span>
               </p>
+              {(customer.ltv != null || customer.lifetimeValue != null) && (
+                <p className="text-xs font-medium text-slate-500 mt-1">
+                  Value: <span className="font-bold text-green-600">{formatCurrency(customer.ltv ?? customer.lifetimeValue)}</span>
+                </p>
+              )}
             </div>
           </div>
         </div>
