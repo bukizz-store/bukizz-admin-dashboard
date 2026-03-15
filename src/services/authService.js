@@ -4,7 +4,11 @@ import api from "./api";
 // Backend Base: http://localhost:5001/api/v1
 
 export const loginAPI = async (email, password) => {
-  const response = await api.post("/auth/login", { email, password });
+  const response = await api.post("/auth/login", { 
+    email, 
+    password,
+    loginAs: "admin"
+  });
   if (response.data.success) {
     return response.data.data;
   } else {
