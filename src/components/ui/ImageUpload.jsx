@@ -11,6 +11,8 @@ const ImageUpload = ({
   className = "",
   values = [], // Controlled prop: array of URL strings
   maxImages = 10,
+  bucket = "products",
+  folder = "product",
 }) => {
   const [uploading, setUploading] = useState(false);
   const [dragOver, setDragOver] = useState(false);
@@ -32,8 +34,8 @@ const ImageUpload = ({
           filesToUpload.map(async (file) => {
              const formData = new FormData();
              formData.append("image", file);
-             formData.append("bucket", "products");
-             formData.append("folder", "product");
+             formData.append("bucket", bucket);
+             formData.append("folder", folder);
              const response = await api.post("/images/upload", formData, {
                headers: { "Content-Type": "multipart/form-data" },
              });
@@ -55,7 +57,7 @@ const ImageUpload = ({
         setUploading(false);
       }
     },
-    [values, onChange, maxImages, multiple],
+    [values, onChange, maxImages, multiple, bucket, folder],
   );
 
   const handleDrop = useCallback(
