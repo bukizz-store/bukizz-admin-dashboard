@@ -1,4 +1,4 @@
-import React, { useState, useEffect } from "react";
+import React, { useState, useEffect, useRef } from "react";
 import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
@@ -93,6 +93,8 @@ const ProductFormPage = () => {
           setFormData({
             ...product.productData,
             fullDescription: product.productData.description || "",
+            // In duplicate mode, clear SKU so user must provide a new one
+            sku: isDuplicateMode ? "" : product.productData.sku,
             brand: product.brandData
               ? { id: product.brandData.brandId, label: product.brandData.name }
               : null,
@@ -486,9 +488,14 @@ const ProductFormPage = () => {
     });
   };
 
+  // Track previous SKU to detect user-driven SKU changes
+  const prevSkuRef = useRef(formData.sku);
+
   // Regeneration Effect
   useEffect(() => {
     const newVariants = generateVariants(productOptions, formData.basePrice);
+    const skuChanged = prevSkuRef.current !== formData.sku;
+    prevSkuRef.current = formData.sku;
 
     setVariants((prev) => {
       // Create map of existing variants by name
@@ -496,13 +503,14 @@ const ProductFormPage = () => {
 
       return newVariants.map((nv) => {
         const existing = prevMap.get(nv.name);
-        if (existing && existing.name !== "Default Variant") {
+        if (existing) {
           return {
             ...nv,
             price: existing.price,
-            compareAtPrice: existing.compareAtPrice, // Preserve existing values
+            compareAtPrice: existing.compareAtPrice,
             stock: existing.stock,
-            sku: existing.sku,
+            // Only preserve variant SKU if product SKU didn't change
+            sku: skuChanged ? nv.sku : existing.sku,
             id: existing.id,
           };
         }
