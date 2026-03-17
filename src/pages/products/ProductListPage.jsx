@@ -1,6 +1,6 @@
 import React, { useState, useEffect } from "react";
 import { useNavigate, useSearchParams } from "react-router-dom";
-import { Plus, Loader2, Trash2, Edit, LayoutGrid, List, Check, X, CreditCard, Percent } from "lucide-react";
+import { Plus, Loader2, Trash2, Edit, LayoutGrid, List, Check, X, CreditCard, Percent, Copy } from "lucide-react";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 import {
@@ -420,6 +420,14 @@ const ProductListPage = () => {
               <Edit size={18} />
             </button>
           </Tooltip>
+          <Tooltip content="Duplicate Product">
+            <button
+              onClick={() => navigate(`/products/create?duplicateId=${row.id}`)}
+              className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
+            >
+              <Copy size={18} />
+            </button>
+          </Tooltip>
           <Tooltip content="Delete Product">
             <button
               onClick={() => confirmDelete(row)}
@@ -605,6 +613,13 @@ const ProductListPage = () => {
                         className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
                       >
                         <Edit size={16} />
+                      </button>
+                      <button
+                        onClick={() => navigate(`/products/create?duplicateId=${product.id}`)}
+                        className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+                        title="Duplicate"
+                      >
+                        <Copy size={16} />
                       </button>
                       <button
                         onClick={() => confirmDelete(product)}

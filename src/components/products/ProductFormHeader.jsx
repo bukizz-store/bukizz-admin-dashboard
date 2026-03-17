@@ -2,7 +2,25 @@ import React from "react";
 import { ArrowLeft, Save } from "lucide-react";
 import { Button } from "../ui";
 
-const ProductFormHeader = ({ isEditMode, isSaving, onSave, onCancel }) => {
+const ProductFormHeader = ({ isEditMode, isDuplicateMode, isSaving, onSave, onCancel }) => {
+  const getTitle = () => {
+    if (isDuplicateMode) return "Duplicate Product";
+    if (isEditMode) return "Edit Product";
+    return "Create Product";
+  };
+
+  const getSubtitle = () => {
+    if (isDuplicateMode) return "Create a new product based on an existing one";
+    if (isEditMode) return "Update product details and inventory";
+    return "Add a new product to your catalog";
+  };
+
+  const getButtonText = () => {
+    if (isDuplicateMode) return "Create Duplicate";
+    if (isEditMode) return "Update Product";
+    return "Save Product";
+  };
+
   return (
     <div className="flex items-center gap-4 mb-6">
       <button
@@ -13,12 +31,10 @@ const ProductFormHeader = ({ isEditMode, isSaving, onSave, onCancel }) => {
       </button>
       <div>
         <h1 className="text-2xl font-bold text-bukizz-navy">
-          {isEditMode ? "Edit Product" : "Create Product"}
+          {getTitle()}
         </h1>
         <p className="text-sm text-slate-500">
-          {isEditMode
-            ? "Update product details and inventory"
-            : "Add a new product to your catalog"}
+          {getSubtitle()}
         </p>
       </div>
       <div className="ml-auto flex gap-3">
@@ -31,7 +47,7 @@ const ProductFormHeader = ({ isEditMode, isSaving, onSave, onCancel }) => {
           onClick={onSave}
           isLoading={isSaving}
         >
-          {isEditMode ? "Update Product" : "Save Product"}
+          {getButtonText()}
         </Button>
       </div>
     </div>

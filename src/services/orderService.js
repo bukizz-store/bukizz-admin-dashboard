@@ -11,6 +11,7 @@ export const fetchOrders = async ({
   status = "",
   retailerId = "",
   warehouseId = "",
+  city = "",
 } = {}) => {
   const params = {
     page,
@@ -19,6 +20,7 @@ export const fetchOrders = async ({
     status: status && status !== "ALL" ? status : undefined,
     retailerId: retailerId || undefined,
     warehouseId: warehouseId || undefined,
+    city: city || undefined,
   };
   // Remove undefined keys so they aren't sent as empty strings
   Object.keys(params).forEach(
