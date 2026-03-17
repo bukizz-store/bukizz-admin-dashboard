@@ -492,6 +492,7 @@ const OrderListPage = () => {
     status: "",
     retailerId: "",
     warehouseId: "",
+    city: "",
     page: 1,
     limit: 20,
   });
@@ -539,6 +540,7 @@ const OrderListPage = () => {
         status: filters.status,
         retailerId: filters.retailerId,
         warehouseId: filters.warehouseId,
+        city: filters.city,
       });
       const data = res.data;
       setOrders(data.orders || []);
@@ -557,6 +559,7 @@ const OrderListPage = () => {
     filters.status,
     filters.retailerId,
     filters.warehouseId,
+    filters.city,
     debouncedSearch,
   ]);
 
@@ -664,9 +667,20 @@ const OrderListPage = () => {
               </option>
             ))}
           </select>
+
+          {/* City */}
+          <select
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-400 min-w-40"
+            value={filters.city}
+            onChange={(e) => handleFilterChange("city", e.target.value)}
+          >
+            <option value="">All Cities</option>
+            <option value="gurugram">Gurugram</option>
+            <option value="kanpur">Kanpur</option>
+          </select>
         </div>
 
-        {(filters.search || filters.status || filters.retailerId) && (
+        {(filters.search || filters.status || filters.retailerId || filters.city) && (
           <button
             onClick={() =>
               setFilters({
@@ -674,6 +688,7 @@ const OrderListPage = () => {
                 status: "",
                 retailerId: "",
                 warehouseId: "",
+                city: "",
                 page: 1,
                 limit: 20,
               })

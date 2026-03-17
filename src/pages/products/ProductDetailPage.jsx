@@ -19,6 +19,7 @@ import {
   Truck,
   Settings,
   Save,
+  Copy,
 } from "lucide-react";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
@@ -452,6 +453,15 @@ const ProductDetailPage = () => {
           >
             <Edit2 size={16} className="mr-2" />
             Edit Product
+          </Button>
+
+          <Button
+            onClick={() => navigate(`/products/create?duplicateId=${id}`)}
+            variant="secondary"
+            className="shrink-0"
+          >
+            <Copy size={16} className="mr-2" />
+            Duplicate
           </Button>
 
           <Button
