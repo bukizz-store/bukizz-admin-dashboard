@@ -298,9 +298,11 @@ const ProductBasicInfo = ({
           <Select
             label="Grade"
             options={[
+              "PREP",
               "Nursery",
               "LKG",
               "UKG",
+              "KG",
               "1st",
               "2nd",
               "3rd",
