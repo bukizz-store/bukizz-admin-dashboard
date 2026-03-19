@@ -123,7 +123,7 @@ const RetailersListPage = () => {
       const ps = new URLSearchParams(prev);
       if (value) ps.set(key, value);
       else ps.delete(key);
-      ps.set("page", "1");
+      if (key !== "page") ps.set("page", "1");
       return ps;
     });
   };

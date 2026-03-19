@@ -1,5 +1,5 @@
-import React, { useState, useEffect } from "react";
-import { useNavigate, useParams } from "react-router-dom";
+import React, { useState, useEffect, useRef } from "react";
+import { useNavigate, useParams, useSearchParams } from "react-router-dom";
 import api from "../../services/api";
 import { useToast } from "../../context/ToastContext";
 
@@ -16,7 +16,10 @@ import { PAYMENT_METHODS } from "../../data/paymentMethods";
 const ProductFormPage = () => {
   const navigate = useNavigate();
   const { id } = useParams();
+  const [searchParams] = useSearchParams();
+  const duplicateId = searchParams.get("duplicateId");
   const isEditMode = !!id;
+  const isDuplicateMode = !isEditMode && !!duplicateId;
   const toast = useToast();
 
   // --- State ---
@@ -76,11 +79,12 @@ const ProductFormPage = () => {
 
   // --- Fetch Data for Editing ---
   useEffect(() => {
-    if (!id) return;
+    const fetchId = id || duplicateId;
+    if (!fetchId) return;
 
     const fetchProduct = async () => {
       try {
-        const response = await api.get(`/products/${id}/comprehensive`);
+        const response = await api.get(`/products/${fetchId}/comprehensive`);
         if (response.data?.success) {
           const product = response.data.data;
           console.log("Fetched Comprehensive Product:", product);
@@ -89,6 +93,8 @@ const ProductFormPage = () => {
           setFormData({
             ...product.productData,
             fullDescription: product.productData.description || "",
+            // In duplicate mode, clear SKU so user must provide a new one
+            sku: isDuplicateMode ? "" : product.productData.sku,
             brand: product.brandData
               ? { id: product.brandData.brandId, label: product.brandData.name }
               : null,
@@ -213,7 +219,7 @@ const ProductFormPage = () => {
     };
 
     fetchProduct();
-  }, [id, navigate, toast]);
+  }, [id, duplicateId, navigate, toast]);
 
   // --- Auto-resolve school subcategory when schoolProductType changes ---
   useEffect(() => {
@@ -482,9 +488,14 @@ const ProductFormPage = () => {
     });
   };
 
+  // Track previous SKU to detect user-driven SKU changes
+  const prevSkuRef = useRef(formData.sku);
+
   // Regeneration Effect
   useEffect(() => {
     const newVariants = generateVariants(productOptions, formData.basePrice);
+    const skuChanged = prevSkuRef.current !== formData.sku;
+    prevSkuRef.current = formData.sku;
 
     setVariants((prev) => {
       // Create map of existing variants by name
@@ -492,13 +503,14 @@ const ProductFormPage = () => {
 
       return newVariants.map((nv) => {
         const existing = prevMap.get(nv.name);
-        if (existing && existing.name !== "Default Variant") {
+        if (existing) {
           return {
             ...nv,
             price: existing.price,
-            compareAtPrice: existing.compareAtPrice, // Preserve existing values
+            compareAtPrice: existing.compareAtPrice,
             stock: existing.stock,
-            sku: existing.sku,
+            // Only preserve variant SKU if product SKU didn't change
+            sku: skuChanged ? nv.sku : existing.sku,
             id: existing.id,
           };
         }
@@ -775,6 +787,7 @@ const ProductFormPage = () => {
     <div className="p-6 bg-bukizz-bg min-h-screen pb-20">
       <ProductFormHeader
         isEditMode={isEditMode}
+        isDuplicateMode={isDuplicateMode}
         isSaving={isSaving}
         onSave={handleSubmit}
         onCancel={() => navigate("/products")}

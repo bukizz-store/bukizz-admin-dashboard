@@ -103,6 +103,20 @@ const formatDate = (dateStr) => {
   });
 };
 
+const formatTime = (dateStr) => {
+  if (!dateStr) return "";
+  return new Date(dateStr).toLocaleTimeString("en-IN", {
+    hour: "2-digit",
+    minute: "2-digit",
+    hour12: true,
+  });
+};
+
+const truncateText = (text, limit = 20) => {
+  if (!text) return "";
+  return text.length > limit ? text.substring(0, limit) + "..." : text;
+};
+
 function useDebounce(value, delay) {
   const [debounced, setDebounced] = useState(value);
   useEffect(() => {
@@ -262,7 +276,14 @@ function OrderRow({ order, onItemStatusChange, onViewOrder, navigate }) {
 
         {/* Date */}
         <td className="px-4 py-3 whitespace-nowrap text-sm text-slate-600">
-          {formatDate(order.createdAt)}
+          <div className="flex flex-col">
+            <span className="font-medium text-slate-900">
+              {formatDate(order.createdAt)}
+            </span>
+            <span className="text-xs text-slate-400 mt-0.5">
+              {formatTime(order.createdAt)}
+            </span>
+          </div>
         </td>
 
         {/* Product summary */}
@@ -286,12 +307,18 @@ function OrderRow({ order, onItemStatusChange, onViewOrder, navigate }) {
 
         {/* Customer */}
         <td className="px-4 py-3">
-          <p className="text-sm font-medium text-slate-900 truncate max-w-35">
-            {customerName}
+          <p
+            className="text-sm font-medium text-slate-900 truncate max-w-35"
+            title={customerName}
+          >
+            {truncateText(customerName, 20)}
           </p>
           {studentName && (
-            <p className="text-xs text-slate-400 mt-0.5 truncate">
-              Student: {studentName}
+            <p
+              className="text-xs text-slate-400 mt-0.5 truncate"
+              title={studentName}
+            >
+              Student: {truncateText(studentName, 15)}
             </p>
           )}
         </td>
@@ -465,6 +492,7 @@ const OrderListPage = () => {
     status: "",
     retailerId: "",
     warehouseId: "",
+    city: "",
     page: 1,
     limit: 20,
   });
@@ -512,6 +540,7 @@ const OrderListPage = () => {
         status: filters.status,
         retailerId: filters.retailerId,
         warehouseId: filters.warehouseId,
+        city: filters.city,
       });
       const data = res.data;
       setOrders(data.orders || []);
@@ -530,6 +559,7 @@ const OrderListPage = () => {
     filters.status,
     filters.retailerId,
     filters.warehouseId,
+    filters.city,
     debouncedSearch,
   ]);
 
@@ -637,9 +667,20 @@ const OrderListPage = () => {
               </option>
             ))}
           </select>
+
+          {/* City */}
+          <select
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-400 min-w-40"
+            value={filters.city}
+            onChange={(e) => handleFilterChange("city", e.target.value)}
+          >
+            <option value="">All Cities</option>
+            <option value="gurugram">Gurugram</option>
+            <option value="kanpur">Kanpur</option>
+          </select>
         </div>
 
-        {(filters.search || filters.status || filters.retailerId) && (
+        {(filters.search || filters.status || filters.retailerId || filters.city) && (
           <button
             onClick={() =>
               setFilters({
@@ -647,6 +688,7 @@ const OrderListPage = () => {
                 status: "",
                 retailerId: "",
                 warehouseId: "",
+                city: "",
                 page: 1,
                 limit: 20,
               })
