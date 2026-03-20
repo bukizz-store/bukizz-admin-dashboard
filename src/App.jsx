@@ -13,6 +13,8 @@ import RetailersListPage from "./pages/retailers/RetailersListPage";
 import RetailerFormPage from "./pages/retailers/RetailerFormPage";
 import RetailerDetailPage from "./pages/retailers/RetailerDetailPage";
 import WarehouseDetailPage from "./pages/warehouses/WarehouseDetailPage";
+import DeliveryPartnerList from "./pages/DeliveryPartners/DeliveryPartnerList";
+import DeliveryPartnerDetail from "./pages/DeliveryPartners/DeliveryPartnerDetail";
 import ProductListPage from "./pages/products/ProductListPage";
 import ProductFormPage from "./pages/products/ProductFormPage";
 import RetailerApprovalsPage from "./pages/approvals/RetailerApprovalsPage";
@@ -128,6 +130,10 @@ function App() {
                   element={<ProductApprovalsPage />}
                 />
                 <Route path="/products/:id" element={<ProductDetailPage />} />
+
+                {/* Delivery Partners */}
+                <Route path="/admin/delivery-partners" element={<DeliveryPartnerList />} />
+                <Route path="/admin/delivery-partners/:id" element={<DeliveryPartnerDetail />} />
 
                 {/* Orders */}
                 <Route path="/orders" element={<OrderListPage />} />
