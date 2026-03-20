@@ -37,6 +37,7 @@ const ProductFormPage = () => {
     fullDescription: "",
     basePrice: "",
     compareAtPrice: "", // Added compareAtPrice
+    deliveryHours: 24,
   });
 
   // Context Specific
@@ -93,6 +94,7 @@ const ProductFormPage = () => {
           setFormData({
             ...product.productData,
             fullDescription: product.productData.description || "",
+            deliveryHours: product.productData.deliveryHours || 24,
             // In duplicate mode, clear SKU so user must provide a new one
             sku: isDuplicateMode ? "" : product.productData.sku,
             brand: product.brandData
@@ -638,6 +640,7 @@ const ProductFormPage = () => {
           productType: productType === "school" ? schoolProductType : "general",
           basePrice: Number(formData.basePrice),
           compareAtPrice: Number(formData.compareAtPrice),
+          deliveryHours: parseInt(formData.deliveryHours) || 24,
           shortDescription: formData.shortDescription,
           description: formData.fullDescription,
           city: formData.city,

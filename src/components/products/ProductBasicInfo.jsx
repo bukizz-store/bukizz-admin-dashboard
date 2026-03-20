@@ -335,7 +335,7 @@ const ProductBasicInfo = ({
         </div>
       )}
 
-      <div className="grid grid-cols-1 md:grid-cols-3 gap-4 mb-4">
+      <div className="grid grid-cols-1 md:grid-cols-4 gap-4 mb-4">
         <Input
           label="SKU (Stock Keeping Unit)"
           placeholder="PROD-001"
@@ -359,6 +359,17 @@ const ProductBasicInfo = ({
           onChange={(e) =>
             setFormData({ ...formData, compareAtPrice: e.target.value })
           }
+        />
+        <Input
+          label="Estimated Delivery Hours"
+          type="number"
+          min="1"
+          placeholder="24"
+          value={formData.deliveryHours}
+          onChange={(e) =>
+            setFormData({ ...formData, deliveryHours: e.target.value })
+          }
+          helperText="Enter the estimated hours it takes to deliver this product. The main website uses this to calculate if the delivery will be 'Same Day' or 'Next Day' based on our 8 AM - 10 PM working hours."
         />
       </div>
 
