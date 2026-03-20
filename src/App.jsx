@@ -20,6 +20,7 @@ import ProductFormPage from "./pages/products/ProductFormPage";
 import RetailerApprovalsPage from "./pages/approvals/RetailerApprovalsPage";
 import RetailerSchoolApprovalsPage from "./pages/approvals/RetailerSchoolApprovalsPage";
 import ProductApprovalsPage from "./pages/approvals/ProductApprovalsPage";
+import DeliveryPartnerApprovalsPage from "./pages/approvals/DeliveryPartnerApprovalsPage";
 import ProductDetailPage from "./pages/products/ProductDetailPage";
 import OrderListPage from "./pages/orders/OrderListPage";
 import OrderDetailPage from "./pages/orders/OrderDetailPage";
@@ -27,6 +28,8 @@ import OrderItemDetailPage from "./pages/orders/OrderItemDetailPage";
 import QueryListPage from "./pages/support/QueryListPage";
 import QueryResolutionPage from "./pages/support/QueryResolutionPage";
 import AdminGlobalSettlements from "./pages/settlements/AdminGlobalSettlements";
+import BannerListPage from "./pages/banners/BannerListPage";
+import BannerFormPage from "./pages/banners/BannerFormPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
@@ -129,6 +132,10 @@ function App() {
                   path="/approvals/products"
                   element={<ProductApprovalsPage />}
                 />
+                <Route
+                  path="/approvals/delivery-partners"
+                  element={<DeliveryPartnerApprovalsPage />}
+                />
                 <Route path="/products/:id" element={<ProductDetailPage />} />
 
                 {/* Delivery Partners */}
@@ -142,6 +149,11 @@ function App() {
                   path="/orders/:id/items/:itemId"
                   element={<OrderItemDetailPage />}
                 />
+
+                {/* Banners */}
+                <Route path="/banners" element={<BannerListPage />} />
+                <Route path="/banners/create" element={<BannerFormPage />} />
+                <Route path="/banners/edit/:id" element={<BannerFormPage />} />
 
                 {/* Support Queries */}
                 <Route path="/orderqueries" element={<QueryListPage />} />

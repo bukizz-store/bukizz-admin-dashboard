@@ -12,6 +12,7 @@ import {
   PackageCheck,
   MessageSquare,
   Wallet,
+  Image as ImageIcon,
   Truck,
 } from "lucide-react";
 
@@ -44,6 +45,12 @@ export const NAV_ITEMS = [
     label: "Delivery Partners",
     path: "/admin/delivery-partners",
     icon: Truck,
+    group: "main",
+  },
+  {
+    label: "Banners",
+    path: "/banners",
+    icon: ImageIcon,
     group: "main",
   },
   {
@@ -95,6 +102,11 @@ export const NAV_ITEMS = [
         label: "Products",
         icon: PackageCheck,
       },
+      {
+        path: "/approvals/delivery-partners",
+        label: "Delivery Partners",
+        icon: Truck,
+      },
     ],
   },
   {
@@ -135,7 +147,10 @@ export const PATH_LABEL_MAP = {
   "/approvals/retailers": "Retailer Approvals",
   "/approvals/school-retailers": "School Retailer Approvals",
   "/approvals/products": "Product Approvals",
+  "/approvals/delivery-partners": "Delivery Partner Approvals",
   "/orders": "Orders",
   "/orderqueries": "Support Queries",
   "/settlements/due-today": "Due Settlements",
+  "/banners": "Banners",
+  "/banners/create": "Create Banner",
 };
