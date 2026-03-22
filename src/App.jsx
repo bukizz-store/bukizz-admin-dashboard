@@ -21,6 +21,7 @@ import RetailerApprovalsPage from "./pages/approvals/RetailerApprovalsPage";
 import RetailerSchoolApprovalsPage from "./pages/approvals/RetailerSchoolApprovalsPage";
 import ProductApprovalsPage from "./pages/approvals/ProductApprovalsPage";
 import DeliveryPartnerApprovalsPage from "./pages/approvals/DeliveryPartnerApprovalsPage";
+import CashRemittanceApprovalsPage from "./pages/approvals/CashRemittanceApprovalsPage";
 import ProductDetailPage from "./pages/products/ProductDetailPage";
 import OrderListPage from "./pages/orders/OrderListPage";
 import OrderDetailPage from "./pages/orders/OrderDetailPage";
@@ -135,6 +136,10 @@ function App() {
                 <Route
                   path="/approvals/delivery-partners"
                   element={<DeliveryPartnerApprovalsPage />}
+                />
+                <Route
+                  path="/approvals/cash-remittances"
+                  element={<CashRemittanceApprovalsPage />}
                 />
                 <Route path="/products/:id" element={<ProductDetailPage />} />
 

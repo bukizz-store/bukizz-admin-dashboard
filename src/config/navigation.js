@@ -107,6 +107,11 @@ export const NAV_ITEMS = [
         label: "Delivery Partners",
         icon: Truck,
       },
+      {
+        path: "/approvals/cash-remittances",
+        label: "Cash Remittances",
+        icon: Wallet,
+      },
     ],
   },
   {
@@ -148,6 +153,7 @@ export const PATH_LABEL_MAP = {
   "/approvals/school-retailers": "School Retailer Approvals",
   "/approvals/products": "Product Approvals",
   "/approvals/delivery-partners": "Delivery Partner Approvals",
+  "/approvals/cash-remittances": "Cash Remittance Approvals",
   "/orders": "Orders",
   "/orderqueries": "Support Queries",
   "/settlements/due-today": "Due Settlements",
