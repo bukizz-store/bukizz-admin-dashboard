@@ -12,8 +12,8 @@ import {
   PackageCheck,
   MessageSquare,
   Wallet,
-  Truck,
   Image as ImageIcon,
+  Truck,
 } from "lucide-react";
 
 export const NAV_ITEMS = [
@@ -39,6 +39,12 @@ export const NAV_ITEMS = [
     label: "Retailers",
     path: "/retailers",
     icon: Store,
+    group: "main",
+  },
+  {
+    label: "Delivery Partners",
+    path: "/admin/delivery-partners",
+    icon: Truck,
     group: "main",
   },
   {
@@ -136,6 +142,7 @@ export const PATH_LABEL_MAP = {
   "/categories": "Categories",
   "/schools": "Schools",
   "/retailers": "Retailers",
+  "/admin/delivery-partners": "Delivery Partners",
   "/schools/add": "Onboard School",
   "/products": "All Products",
   "/products/school": "School Products",
