@@ -26,6 +26,7 @@ import {
 import {
   fetchAdminOrderById,
   updateOrderItemStatus,
+  updatePaymentInfo,
 } from "../../services/orderService";
 
 // ─────────────────────────────────────────────────────────────────────────────
@@ -88,6 +89,21 @@ const PAYMENT_STATUS_CLASS = {
   failed: "bg-red-100 text-red-800",
   refunded: "bg-slate-100 text-slate-700",
 };
+
+const PAYMENT_STATUS_OPTIONS = [
+  { value: "pending",  label: "Pending",  color: "text-yellow-700 bg-yellow-50" },
+  { value: "paid",     label: "Paid",     color: "text-green-700 bg-green-50" },
+  { value: "failed",   label: "Failed",   color: "text-red-700 bg-red-50" },
+  { value: "refunded", label: "Refunded", color: "text-slate-700 bg-slate-100" },
+];
+
+const PAYMENT_METHOD_OPTIONS = [
+  { value: "cod",        label: "COD" },
+  { value: "upi",        label: "UPI" },
+  { value: "card",       label: "Card" },
+  { value: "netbanking", label: "Netbanking" },
+  { value: "wallet",     label: "Wallet" },
+];
 
 function formatDate(dateStr) {
   if (!dateStr) return "—";
@@ -305,13 +321,34 @@ const OrderDetailPage = () => {
     fetchOrder();
   }, [fetchOrder]);
 
+  // ── Admin Override state ────────────────────────────────────────────────────
+  const [overridePaymentStatus, setOverridePaymentStatus] = useState("");
+  const [overridePaymentMethod, setOverridePaymentMethod] = useState("");
+  const [overrideStatusMode, setOverrideStatusMode] = useState("single"); // "single" | "per-item"
+  const [overrideSingleStatus, setOverrideSingleStatus] = useState("");
+  const [overrideItemStatuses, setOverrideItemStatuses] = useState({});
+  const [overrideSaving, setOverrideSaving] = useState(false);
+  const [overrideSuccess, setOverrideSuccess] = useState("");
+
+  // Sync override defaults when order loads
+  useEffect(() => {
+    if (order) {
+      setOverridePaymentStatus(order.paymentStatus || "pending");
+      setOverridePaymentMethod(order.paymentMethod || "cod");
+      const items = order.items || [];
+      const map = {};
+      items.forEach((i) => { map[i.id] = i.status || "initialized"; });
+      setOverrideItemStatuses(map);
+      setOverrideSingleStatus(items[0]?.status || "initialized");
+    }
+  }, [order]);
+
   // Update a single item's status via /:orderId/items/:itemId/status
   const handleItemStatusChange = async (itemId, newStatus) => {
     setUpdatingItemId(itemId);
     setError(null);
     try {
       await updateOrderItemStatus(id, itemId, newStatus);
-      // Optimistic update
       setOrder((prev) => ({
         ...prev,
         items: (prev?.items || []).map((item) =>
@@ -326,6 +363,53 @@ const OrderDetailPage = () => {
       );
     } finally {
       setUpdatingItemId(null);
+    }
+  };
+
+  // Admin override — save all changes
+  const handleOverrideSave = async () => {
+    setOverrideSaving(true);
+    setError(null);
+    setOverrideSuccess("");
+    const promises = [];
+    const items = order?.items || [];
+
+    // 1. Payment update
+    promises.push(
+      updatePaymentInfo(id, {
+        paymentStatus: overridePaymentStatus,
+        paymentMethod: overridePaymentMethod,
+      })
+    );
+
+    // 2. Item statuses
+    if (overrideStatusMode === "single") {
+      // Apply the same status to every item
+      items.forEach((item) => {
+        promises.push(updateOrderItemStatus(id, item.id, overrideSingleStatus));
+      });
+    } else {
+      // Per-item
+      items.forEach((item) => {
+        const newS = overrideItemStatuses[item.id];
+        if (newS && newS !== item.status) {
+          promises.push(updateOrderItemStatus(id, item.id, newS));
+        }
+      });
+    }
+
+    try {
+      await Promise.all(promises);
+      // Refresh
+      await fetchOrder();
+      setOverrideSuccess("All changes saved successfully.");
+      setTimeout(() => setOverrideSuccess(""), 4000);
+    } catch (err) {
+      setError(
+        err.response?.data?.message || err.message || "Failed to save some changes.",
+      );
+    } finally {
+      setOverrideSaving(false);
     }
   };
 
@@ -479,6 +563,7 @@ const OrderDetailPage = () => {
           </span>
         </div>
       )}
+
 
       {/* Main Grid */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
@@ -771,7 +856,6 @@ const OrderDetailPage = () => {
             </CardContent>
           </Card>
 
-          {/* Payment */}
           <Card>
             <CardHeader>
               <CardTitle icon={CreditCard}>Payment</CardTitle>
@@ -792,6 +876,14 @@ const OrderDetailPage = () => {
                     {order.paymentStatus || "—"}
                   </span>
                 </div>
+                {order.paymentCollectionMethod && (
+                  <div className="flex items-center justify-between">
+                    <span className="text-sm text-slate-500">Collection</span>
+                    <span className="text-sm font-semibold text-slate-900 uppercase">
+                      {order.paymentCollectionMethod}
+                    </span>
+                  </div>
+                )}
                 <div className="flex items-center justify-between border-t border-slate-100 pt-3">
                   <span className="text-sm font-bold text-slate-900">
                     Total
@@ -827,6 +919,108 @@ const OrderDetailPage = () => {
               </CardContent>
             </Card>
           )}
+
+          {/* ── Admin Override Panel ──────────────────────────────────────── */}
+          <Card>
+            <CardHeader>
+              <CardTitle icon={CreditCard}>Admin Override</CardTitle>
+              <p className="text-xs text-slate-400 mt-1">Update payment &amp; status manually</p>
+            </CardHeader>
+            <CardContent>
+              {overrideSuccess && (
+                <div className="mb-3 bg-green-50 border border-green-200 rounded-lg px-3 py-2 text-xs text-green-700 flex items-center gap-2">
+                  <CheckCircle className="h-3.5 w-3.5 shrink-0" />{overrideSuccess}
+                </div>
+              )}
+
+              <div className="space-y-4">
+                {/* Payment Status */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Payment Status</label>
+                  <select
+                    value={overridePaymentStatus}
+                    onChange={(e) => setOverridePaymentStatus(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
+                  >
+                    {PAYMENT_STATUS_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+
+                {/* Payment Method */}
+                <div>
+                  <label className="block text-xs font-bold text-slate-500 uppercase tracking-wider mb-1.5">Payment Method</label>
+                  <select
+                    value={overridePaymentMethod}
+                    onChange={(e) => setOverridePaymentMethod(e.target.value)}
+                    className="w-full px-3 py-2 border border-slate-200 rounded-xl text-sm bg-white focus:outline-none focus:ring-2 focus:ring-orange-200 focus:border-orange-400"
+                  >
+                    {PAYMENT_METHOD_OPTIONS.map((o) => (
+                      <option key={o.value} value={o.value}>{o.label}</option>
+                    ))}
+                  </select>
+                </div>
+              </div>
+
+              {/* Order Item Statuses */}
+              <div className="mt-4">
+                <div className="flex items-center justify-between mb-2">
+                  <label className="text-xs font-bold text-slate-500 uppercase tracking-wider">Item Status</label>
+                  <div className="flex bg-slate-100 rounded-md p-0.5 text-[10px] font-semibold">
+                    <button
+                      type="button"
+                      onClick={() => setOverrideStatusMode("single")}
+                      className={`px-2 py-1 rounded transition-all ${overrideStatusMode === "single" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                    >
+                      All
+                    </button>
+                    <button
+                      type="button"
+                      onClick={() => setOverrideStatusMode("per-item")}
+                      className={`px-2 py-1 rounded transition-all ${overrideStatusMode === "per-item" ? "bg-white text-slate-900 shadow-sm" : "text-slate-500"}`}
+                    >
+                      Each
+                    </button>
+                  </div>
+                </div>
+
+                {overrideStatusMode === "single" ? (
+                  <div className="bg-slate-50 rounded-xl border border-slate-100 p-3">
+                    <p className="text-[10px] text-slate-400 mb-1.5">Applies to all {items.length} item(s)</p>
+                    <StatusSelect
+                      value={overrideSingleStatus}
+                      onChange={setOverrideSingleStatus}
+                      size="sm"
+                    />
+                  </div>
+                ) : (
+                  <div className="space-y-1.5">
+                    {items.map((item) => (
+                      <div key={item.id} className="bg-slate-50 rounded-lg border border-slate-100 px-3 py-2">
+                        <p className="text-xs font-medium text-slate-700 truncate mb-1">{item.title}</p>
+                        <StatusSelect
+                          value={overrideItemStatuses[item.id] || "initialized"}
+                          onChange={(v) => setOverrideItemStatuses((prev) => ({ ...prev, [item.id]: v }))}
+                          size="sm"
+                        />
+                      </div>
+                    ))}
+                  </div>
+                )}
+              </div>
+
+              {/* Save Button */}
+              <button
+                onClick={handleOverrideSave}
+                disabled={overrideSaving}
+                className="mt-4 w-full flex items-center justify-center gap-2 px-4 py-2.5 bg-orange-500 text-white text-sm font-bold rounded-xl hover:bg-orange-600 transition-colors disabled:opacity-60 disabled:cursor-not-allowed shadow-sm"
+              >
+                {overrideSaving ? <Loader2 className="h-4 w-4 animate-spin" /> : <CheckCircle className="h-4 w-4" />}
+                {overrideSaving ? "Saving…" : "Save All Changes"}
+              </button>
+            </CardContent>
+          </Card>
         </div>
       </div>
     </div>

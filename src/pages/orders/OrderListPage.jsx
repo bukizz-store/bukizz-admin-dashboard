@@ -493,6 +493,7 @@ const OrderListPage = () => {
     retailerId: "",
     warehouseId: "",
     city: "",
+    paymentCollectionMethod: "",
     page: 1,
     limit: 20,
   });
@@ -541,6 +542,7 @@ const OrderListPage = () => {
         retailerId: filters.retailerId,
         warehouseId: filters.warehouseId,
         city: filters.city,
+        paymentCollectionMethod: filters.paymentCollectionMethod,
       });
       const data = res.data;
       setOrders(data.orders || []);
@@ -560,6 +562,7 @@ const OrderListPage = () => {
     filters.retailerId,
     filters.warehouseId,
     filters.city,
+    filters.paymentCollectionMethod,
     debouncedSearch,
   ]);
 
@@ -678,9 +681,21 @@ const OrderListPage = () => {
             <option value="gurugram">Gurugram</option>
             <option value="kanpur">Kanpur</option>
           </select>
+
+          {/* Payment Collection Method */}
+          <select
+            className="px-3 py-2 border border-slate-200 rounded-lg text-sm bg-white focus:outline-none focus:border-blue-400 min-w-40"
+            value={filters.paymentCollectionMethod}
+            onChange={(e) => handleFilterChange("paymentCollectionMethod", e.target.value)}
+          >
+            <option value="">All Collection Methods</option>
+            <option value="online">Online</option>
+            <option value="prepaid">Prepaid</option>
+            <option value="cash">Cash</option>
+          </select>
         </div>
 
-        {(filters.search || filters.status || filters.retailerId || filters.city) && (
+        {(filters.search || filters.status || filters.retailerId || filters.city || filters.paymentCollectionMethod) && (
           <button
             onClick={() =>
               setFilters({
@@ -689,6 +704,7 @@ const OrderListPage = () => {
                 retailerId: "",
                 warehouseId: "",
                 city: "",
+                paymentCollectionMethod: "",
                 page: 1,
                 limit: 20,
               })

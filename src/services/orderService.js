@@ -12,6 +12,7 @@ export const fetchOrders = async ({
   retailerId = "",
   warehouseId = "",
   city = "",
+  paymentCollectionMethod = "",
 } = {}) => {
   const params = {
     page,
@@ -21,6 +22,7 @@ export const fetchOrders = async ({
     retailerId: retailerId || undefined,
     warehouseId: warehouseId || undefined,
     city: city || undefined,
+    paymentCollectionMethod: paymentCollectionMethod || undefined,
   };
   // Remove undefined keys so they aren't sent as empty strings
   Object.keys(params).forEach(
@@ -64,6 +66,18 @@ export const updateOrderItemStatus = async (
   const response = await api.put(`/orders/${orderId}/items/${itemId}/status`, {
     status,
     note: note || `Item status updated to ${status} by admin`,
+  });
+  return response.data;
+};
+
+/**
+ * Admin manual override for payment status & method.
+ * Maps to PUT /orders/:orderId/payment
+ */
+export const updatePaymentInfo = async (orderId, { paymentStatus, paymentMethod }) => {
+  const response = await api.put(`/orders/${orderId}/payment`, {
+    paymentStatus,
+    paymentMethod: paymentMethod || undefined,
   });
   return response.data;
 };
