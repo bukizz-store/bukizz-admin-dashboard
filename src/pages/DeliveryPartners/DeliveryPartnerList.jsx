@@ -335,7 +335,7 @@ const DeliveryPartnerList = () => {
           },
           {
             label: "City",
-            options: ["New Delhi", "Mumbai", "Bangalore", "Gurugram"],
+            options: ["Kanpur", "Gurugram"],
             value: currentCity,
             onChange: (val) => handleFilterChange("city", val),
           },
