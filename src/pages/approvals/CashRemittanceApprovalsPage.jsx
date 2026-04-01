@@ -81,7 +81,7 @@ const CashRemittanceApprovalsPage = () => {
           </div>
           <div>
             <div className="font-medium text-slate-900">
-              {row.delivery_partner?.name || "N/A"}
+              {row.delivery_partner?.full_name || "N/A"}
             </div>
             <div className="text-sm text-slate-500">{row.delivery_partner?.phone}</div>
           </div>
@@ -182,7 +182,7 @@ const CashRemittanceApprovalsPage = () => {
         onClose={() => setIsApproveModalOpen(false)}
         onConfirm={handleApprove}
         title="Approve Cash Remittance"
-        message={`Are you sure you want to approve the cash remittance of **₹${parseFloat(selectedRemittance?.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}** from **${selectedRemittance?.delivery_partner?.name || "this partner"}**?`}
+        message={`Are you sure you want to approve the cash remittance of **₹${parseFloat(selectedRemittance?.amount || 0).toLocaleString('en-IN', { minimumFractionDigits: 2 })}** from **${selectedRemittance?.delivery_partner?.full_name || "this partner"}**?`}
         confirmText={isApproving ? "Approving..." : "Approve Remittance"}
         isLoading={isApproving}
         confirmVariant="success"
