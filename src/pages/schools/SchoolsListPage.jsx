@@ -20,6 +20,7 @@ import {
   Pagination,
 } from "../../components/common";
 import { Button, ConfirmationModal, Tooltip } from "../../components/ui";
+import PermissionGuard from "../../components/auth/PermissionGuard";
 
 const SchoolsListPage = () => {
   const toast = useToast();
@@ -291,22 +292,24 @@ const SchoolsListPage = () => {
           <Eye size={16} />
         </button>
       </Tooltip>
-      <Tooltip content="Edit School">
-        <button
-          onClick={() => navigate(`/schools/edit/${row.id}`)}
-          className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-full transition-colors"
-        >
-          <Pencil size={16} />
-        </button>
-      </Tooltip>
-      <Tooltip content="Delete School">
-        <button
-          onClick={() => confirmDelete(row.id)}
-          className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
-        >
-          <Trash2 size={16} />
-        </button>
-      </Tooltip>
+      <PermissionGuard permission="schools:manage">
+        <Tooltip content="Edit School">
+          <button
+            onClick={() => navigate(`/schools/edit/${row.id}`)}
+            className="p-2 text-slate-400 hover:text-orange-500 hover:bg-orange-50 rounded-full transition-colors"
+          >
+            <Pencil size={16} />
+          </button>
+        </Tooltip>
+        <Tooltip content="Delete School">
+          <button
+            onClick={() => confirmDelete(row.id)}
+            className="p-2 text-slate-400 hover:text-red-500 hover:bg-red-50 rounded-full transition-colors"
+          >
+            <Trash2 size={16} />
+          </button>
+        </Tooltip>
+      </PermissionGuard>
     </div>
   );
 
@@ -365,12 +368,21 @@ const SchoolsListPage = () => {
 
       {/* Footer Actions */}
       <div className="grid grid-cols-2 border-t border-slate-100 divide-x divide-slate-100">
-        <button
-          onClick={() => navigate(`/schools/edit/${item.id}`)}
-          className="py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+        <PermissionGuard
+          permission="schools:manage"
+          fallback={
+            <div className="py-2.5 text-sm font-medium text-slate-400 text-center">
+              View Only
+            </div>
+          }
         >
-          Edit
-        </button>
+          <button
+            onClick={() => navigate(`/schools/edit/${item.id}`)}
+            className="py-2.5 text-sm font-medium text-slate-600 hover:bg-slate-50 transition-colors"
+          >
+            Edit
+          </button>
+        </PermissionGuard>
         <button
           className="py-2.5 text-sm font-medium text-bukizz-orange hover:bg-orange-50 transition-colors"
           onClick={() => navigate(`/schools/${item.id}`)}
@@ -394,20 +406,24 @@ const SchoolsListPage = () => {
           </p>
         </div>
         <div className="flex items-center gap-3">
-          <Button
-            variant="outline"
-            icon={ListOrdered}
-            onClick={() => navigate(`/schools/sort?city=${currentCity || "gurugram"}`)}
-          >
-            Manage Sort Order
-          </Button>
-          <Button
-            variant="primary"
-            icon={Plus}
-            onClick={() => navigate("/schools/create")}
-          >
-            Onboard School
-          </Button>
+          <PermissionGuard permission="schools:sort_order:manage">
+            <Button
+              variant="outline"
+              icon={ListOrdered}
+              onClick={() => navigate(`/schools/sort?city=${currentCity || "gurugram"}`)}
+            >
+              Manage Sort Order
+            </Button>
+          </PermissionGuard>
+          <PermissionGuard permission="schools:manage">
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={() => navigate("/schools/create")}
+            >
+              Onboard School
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 

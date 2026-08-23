@@ -40,11 +40,7 @@ import { ToastProvider } from "./context/ToastContext";
 import { NAV_ITEMS } from "./config/navigation";
 
 function App() {
-  // Helper to flatten nested routes if we ever need to generate them dynamically from config
-  // For now, we manually map them to ensure everything works as expected with the Placeholder
-
   const renderDashboardRoutes = () => {
-    // Collect all paths from config
     const paths = [];
     NAV_ITEMS.forEach((item) => {
       if (item.path) paths.push(item.path);
@@ -75,102 +71,293 @@ function App() {
             <Route path="/login" element={<Login />} />
             <Route path="/register" element={<Register />} />
 
-            {/* Protected Dashboard Routes */}
+            {/* Base Protected Dashboard Routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<MainLayout />}>
-                {/* Specific Routes for Categories */}
+                {/* Categories */}
+                <Route
+                  path="/categories"
+                  element={
+                    <ProtectedRoute requiredPermission="categories:read">
+                      <CategoriesPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/categories/create"
-                  element={<CategoryFormPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="categories:manage">
+                      <CategoryFormPage />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path="/categories/edit/:id"
-                  element={<CategoryFormPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="categories:manage">
+                      <CategoryFormPage />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path="/categories/:id"
-                  element={<CategoryDetailPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="categories:read">
+                      <CategoryDetailPage />
+                    </ProtectedRoute>
+                  }
                 />
 
-                {/* Specific Routes for Schools */}
-                <Route path="/schools/sort" element={<SchoolSortOrderPage />} />
-                <Route path="/schools/create" element={<SchoolFormPage />} />
-                <Route path="/schools/edit/:id" element={<SchoolFormPage />} />
-                <Route path="/schools/:id" element={<SchoolDetailPage />} />
+                {/* Schools */}
+                <Route
+                  path="/schools"
+                  element={
+                    <ProtectedRoute requiredPermission="schools:read">
+                      <SchoolsListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/schools/sort"
+                  element={
+                    <ProtectedRoute requiredPermission="schools:sort_order:manage">
+                      <SchoolSortOrderPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/schools/create"
+                  element={
+                    <ProtectedRoute requiredPermission="schools:manage">
+                      <SchoolFormPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/schools/edit/:id"
+                  element={
+                    <ProtectedRoute requiredPermission="schools:manage">
+                      <SchoolFormPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/schools/:id"
+                  element={
+                    <ProtectedRoute requiredPermission="schools:read">
+                      <SchoolDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Retailers */}
-                <Route path="/retailers" element={<RetailersListPage />} />
+                <Route
+                  path="/retailers"
+                  element={
+                    <ProtectedRoute requiredPermission="retailers:read">
+                      <RetailersListPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/retailers/create"
-                  element={<RetailerFormPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="retailers:manage">
+                      <RetailerFormPage />
+                    </ProtectedRoute>
+                  }
                 />
-                <Route path="/retailers/:id" element={<RetailerDetailPage />} />
+                <Route
+                  path="/retailers/:id"
+                  element={
+                    <ProtectedRoute requiredPermission="retailers:read">
+                      <RetailerDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Warehouse */}
                 <Route
                   path="/warehouse/:id"
-                  element={<WarehouseDetailPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="retailers:warehouses:read">
+                      <WarehouseDetailPage />
+                    </ProtectedRoute>
+                  }
                 />
 
                 {/* Products */}
-                <Route path="/products" element={<ProductListPage />} />
-                <Route path="/products/create" element={<ProductFormPage />} />
+                <Route
+                  path="/products"
+                  element={
+                    <ProtectedRoute requiredPermission="products:read">
+                      <ProductListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/products/create"
+                  element={
+                    <ProtectedRoute requiredPermission="products:manage">
+                      <ProductFormPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/products/edit/:id"
-                  element={<ProductFormPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="products:manage">
+                      <ProductFormPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/products/:id"
+                  element={
+                    <ProtectedRoute requiredPermission="products:read">
+                      <ProductDetailPage />
+                    </ProtectedRoute>
+                  }
                 />
 
                 {/* Approvals */}
                 <Route
                   path="/approvals/retailers"
-                  element={<RetailerApprovalsPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="approvals:retailers:read">
+                      <RetailerApprovalsPage />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path="/approvals/school-retailers"
-                  element={<RetailerSchoolApprovalsPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="approvals:school_retailers:read">
+                      <RetailerSchoolApprovalsPage />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path="/approvals/products"
-                  element={<ProductApprovalsPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="approvals:products:manage">
+                      <ProductApprovalsPage />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path="/approvals/delivery-partners"
-                  element={<DeliveryPartnerApprovalsPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="approvals:delivery_partners:read">
+                      <DeliveryPartnerApprovalsPage />
+                    </ProtectedRoute>
+                  }
                 />
                 <Route
                   path="/approvals/cash-remittances"
-                  element={<CashRemittanceApprovalsPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="approvals:cash_remittances:read">
+                      <CashRemittanceApprovalsPage />
+                    </ProtectedRoute>
+                  }
                 />
-                <Route path="/products/:id" element={<ProductDetailPage />} />
 
                 {/* Delivery Partners */}
-                <Route path="/admin/delivery-partners" element={<DeliveryPartnerList />} />
-                <Route path="/admin/delivery-partners/:id" element={<DeliveryPartnerDetail />} />
+                <Route
+                  path="/admin/delivery-partners"
+                  element={
+                    <ProtectedRoute requiredPermission="delivery_partners:read">
+                      <DeliveryPartnerList />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/delivery-partners/:id"
+                  element={
+                    <ProtectedRoute requiredPermission="delivery_partners:read">
+                      <DeliveryPartnerDetail />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Orders */}
-                <Route path="/orders" element={<OrderListPage />} />
-                <Route path="/orders/:id" element={<OrderDetailPage />} />
+                <Route
+                  path="/orders"
+                  element={
+                    <ProtectedRoute requiredPermission="orders:read">
+                      <OrderListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/orders/:id"
+                  element={
+                    <ProtectedRoute requiredPermission="orders:read">
+                      <OrderDetailPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/orders/:id/items/:itemId"
-                  element={<OrderItemDetailPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="orders:read">
+                      <OrderItemDetailPage />
+                    </ProtectedRoute>
+                  }
                 />
 
                 {/* Banners */}
-                <Route path="/banners" element={<BannerListPage />} />
-                <Route path="/banners/create" element={<BannerFormPage />} />
-                <Route path="/banners/edit/:id" element={<BannerFormPage />} />
+                <Route
+                  path="/banners"
+                  element={
+                    <ProtectedRoute requiredPermission="banners:read">
+                      <BannerListPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/banners/create"
+                  element={
+                    <ProtectedRoute requiredPermission="banners:manage">
+                      <BannerFormPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/banners/edit/:id"
+                  element={
+                    <ProtectedRoute requiredPermission="banners:manage">
+                      <BannerFormPage />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Support Queries */}
-                <Route path="/orderqueries" element={<QueryListPage />} />
+                <Route
+                  path="/orderqueries"
+                  element={
+                    <ProtectedRoute requiredPermission="support:queries:read">
+                      <QueryListPage />
+                    </ProtectedRoute>
+                  }
+                />
                 <Route
                   path="/orderqueries/:id"
-                  element={<QueryResolutionPage />}
+                  element={
+                    <ProtectedRoute requiredPermission="support:queries:read">
+                      <QueryResolutionPage />
+                    </ProtectedRoute>
+                  }
                 />
 
                 {/* Settlements */}
                 <Route
                   path="/settlements/due-today"
-                  element={<AdminGlobalSettlements />}
+                  element={
+                    <ProtectedRoute requiredPermission="settlements:read">
+                      <AdminGlobalSettlements />
+                    </ProtectedRoute>
+                  }
                 />
 
                 {renderDashboardRoutes()}

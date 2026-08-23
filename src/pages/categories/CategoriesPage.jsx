@@ -11,6 +11,7 @@ import {
   Pagination,
 } from "../../components/common";
 import { Button } from "../../components/ui";
+import PermissionGuard from "../../components/auth/PermissionGuard";
 
 const CategoriesPage = () => {
   const { toast } = useToast();
@@ -289,31 +290,35 @@ const CategoriesPage = () => {
         <span className="text-xs font-medium text-slate-500">
           {item.children?.length || 0} Subcategories
         </span>
-        <Button
-          variant="secondary"
-          size="sm"
-          icon={Pencil}
-          onClick={(e) => {
-            e.stopPropagation();
-            navigate(`/categories/edit/${item.id}`);
-          }}
-        >
-          Edit
-        </Button>
+        <PermissionGuard permission="categories:manage">
+          <Button
+            variant="secondary"
+            size="sm"
+            icon={Pencil}
+            onClick={(e) => {
+              e.stopPropagation();
+              navigate(`/categories/edit/${item.id}`);
+            }}
+          >
+            Edit
+          </Button>
+        </PermissionGuard>
       </div>
     </div>
   );
 
   const actions = (row) => (
-    <button
-      onClick={(e) => {
-        e.stopPropagation();
-        navigate(`/categories/edit/${row.id}`);
-      }}
-      className="p-2 text-slate-400 hover:text-bukizz-orange hover:bg-orange-50 rounded-full transition-colors"
-    >
-      <Pencil size={16} />
-    </button>
+    <PermissionGuard permission="categories:manage">
+      <button
+        onClick={(e) => {
+          e.stopPropagation();
+          navigate(`/categories/edit/${row.id}`);
+        }}
+        className="p-2 text-slate-400 hover:text-bukizz-orange hover:bg-orange-50 rounded-full transition-colors"
+      >
+        <Pencil size={16} />
+      </button>
+    </PermissionGuard>
   );
 
   return (
@@ -328,13 +333,15 @@ const CategoriesPage = () => {
             Manage your product categories and catalogs
           </p>
         </div>
-        <Button
-          variant="primary"
-          icon={Plus}
-          onClick={() => navigate("/categories/create")}
-        >
-          Add Category
-        </Button>
+        <PermissionGuard permission="categories:manage">
+          <Button
+            variant="primary"
+            icon={Plus}
+            onClick={() => navigate("/categories/create")}
+          >
+            Add Category
+          </Button>
+        </PermissionGuard>
       </div>
 
       {/* Controls */}

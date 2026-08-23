@@ -1,4 +1,11 @@
-import React, { createContext, useContext, useState, useEffect } from "react";
+import React, {
+  createContext,
+  useContext,
+  useState,
+  useEffect,
+  useCallback,
+  useMemo,
+} from "react";
 import {
   loginAPI,
   registerAPI,
@@ -19,29 +26,84 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
 
+  // Normalize permissions array from user payload
+  const permissions = useMemo(() => {
+    if (!user) return [];
+    if (Array.isArray(user.permissions)) return user.permissions;
+    return [];
+  }, [user]);
+
+  // Master bypass check (superadmin role bypasses all permission restrictions)
+  const isSuperAdmin = useMemo(() => {
+    if (!user) return false;
+    const role = user.role || "";
+    const roles = Array.isArray(user.roles) ? user.roles : [];
+    return role === "superadmin" || roles.includes("superadmin");
+  }, [user]);
+
+  /**
+   * Evaluates if the authenticated user possesses a specific action permission.
+   * Master role (superadmin) automatically evaluates to true.
+   * @param {string} requiredPermission - Permission string (e.g., 'schools:manage')
+   * @returns {boolean}
+   */
+  const hasPermission = useCallback(
+    (requiredPermission) => {
+      if (!isAuthenticated || !user) return false;
+      if (isSuperAdmin) return true;
+      if (!requiredPermission) return true;
+      return permissions.includes(requiredPermission);
+    },
+    [isAuthenticated, user, isSuperAdmin, permissions]
+  );
+
+  /**
+   * Evaluates if the authenticated user possesses ANY of the listed permissions.
+   * @param {string[]} permissionsList - Array of permission strings
+   * @returns {boolean}
+   */
+  const hasAnyPermission = useCallback(
+    (permissionsList = []) => {
+      if (!isAuthenticated || !user) return false;
+      if (isSuperAdmin) return true;
+      if (!permissionsList || permissionsList.length === 0) return true;
+      return permissionsList.some((perm) => permissions.includes(perm));
+    },
+    [isAuthenticated, user, isSuperAdmin, permissions]
+  );
+
+  /**
+   * Evaluates if the authenticated user possesses ALL of the listed permissions.
+   * @param {string[]} permissionsList - Array of permission strings
+   * @returns {boolean}
+   */
+  const hasAllPermissions = useCallback(
+    (permissionsList = []) => {
+      if (!isAuthenticated || !user) return false;
+      if (isSuperAdmin) return true;
+      if (!permissionsList || permissionsList.length === 0) return true;
+      return permissionsList.every((perm) => permissions.includes(perm));
+    },
+    [isAuthenticated, user, isSuperAdmin, permissions]
+  );
+
   // Initialize Auth State on Mount
   useEffect(() => {
     const initAuth = async () => {
       const token = localStorage.getItem("accessToken");
       if (token) {
         try {
-          console.log("token from AuthContext useEffect", token);
-          // Verify token by fetching current user
           const userData = await getCurrentUserAPI();
-          console.log("userData from AuthContext useEffect", userData);
           setUser(userData);
           setIsAuthenticated(true);
         } catch (error) {
           console.error("Auth Initialization Failed:", error);
-          // Token invalid or expired (and refresh failed in interceptor)
           localStorage.removeItem("accessToken");
           localStorage.removeItem("refreshToken");
           localStorage.removeItem("user");
           setUser(null);
           setIsAuthenticated(false);
         }
-      } else {
-        console.log("No token found");
       }
       setIsLoading(false);
     };
@@ -54,9 +116,6 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       const data = await loginAPI(email, password);
-      // Expected data: { user, accessToken, refreshToken }
-      console.log("data from AuthContext login", data);
-
       const accessToken = data.accessToken || data.access_token || data.token;
       const refreshToken = data.refreshToken || data.refresh_token;
 
@@ -73,7 +132,7 @@ export const AuthProvider = ({ children }) => {
 
       localStorage.setItem("accessToken", accessToken);
       if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("user", JSON.stringify(data.user)); // Optional cache
+      localStorage.setItem("user", JSON.stringify(data.user));
 
       return { success: true };
     } catch (error) {
@@ -92,9 +151,6 @@ export const AuthProvider = ({ children }) => {
     setIsLoading(true);
     try {
       const data = await registerAPI(fullName, email, password);
-
-      // Auto-login after register logic usually provided by backend too
-      // If backend returns tokens on register:
       const accessToken = data.accessToken || data.access_token || data.token;
       const refreshToken = data.refreshToken || data.refresh_token;
 
@@ -103,9 +159,6 @@ export const AuthProvider = ({ children }) => {
         setIsAuthenticated(true);
         localStorage.setItem("accessToken", accessToken);
         if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
-      } else {
-        // Maybe backend just returns success without tokens, user needs to login
-        // For now, we assume tokens if we want auto-login
       }
 
       return { success: true };
@@ -123,7 +176,7 @@ export const AuthProvider = ({ children }) => {
   // Logout
   const logout = async (isSessionExpired = false) => {
     if (isSessionExpired) {
-      toast.info("Session expired. Please login again.");
+      toast?.info?.("Session expired. Please login again.");
     }
 
     try {
@@ -132,7 +185,6 @@ export const AuthProvider = ({ children }) => {
     } catch (error) {
       console.error("Logout API Error (ignoring):", error);
     } finally {
-      // Clear local state regardless of API success
       localStorage.removeItem("accessToken");
       localStorage.removeItem("refreshToken");
       localStorage.removeItem("user");
@@ -145,8 +197,13 @@ export const AuthProvider = ({ children }) => {
     <AuthContext.Provider
       value={{
         user,
+        permissions,
+        isSuperAdmin,
         isAuthenticated,
         isLoading,
+        hasPermission,
+        hasAnyPermission,
+        hasAllPermissions,
         login,
         register,
         logout,

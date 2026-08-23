@@ -10,6 +10,7 @@ import {
   StatusBadge,
 } from "../../components/common";
 import { Button, ConfirmationModal, Tooltip, Input } from "../../components/ui";
+import PermissionGuard from "../../components/auth/PermissionGuard";
 import { PAYMENT_METHODS } from "../../data/paymentMethods";
 
 const ProductListPage = () => {
@@ -403,39 +404,43 @@ const ProductListPage = () => {
           onClick={(e) => e.stopPropagation()}
         >
           {!row.isActive && (
-            <Tooltip content="Approve Product">
+            <PermissionGuard permission="approvals:products:manage">
+              <Tooltip content="Approve Product">
+                <button
+                  onClick={() => handleOpenApprove(row)}
+                  className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                >
+                  <Check size={18} />
+                </button>
+              </Tooltip>
+            </PermissionGuard>
+          )}
+          <PermissionGuard permission="products:manage">
+            <Tooltip content="Edit Product">
               <button
-                onClick={() => handleOpenApprove(row)}
-                className="p-1.5 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded transition-colors"
+                onClick={() => navigate(`/products/edit/${row.id}`)}
+                className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
               >
-                <Check size={18} />
+                <Edit size={18} />
               </button>
             </Tooltip>
-          )}
-          <Tooltip content="Edit Product">
-            <button
-              onClick={() => navigate(`/products/edit/${row.id}`)}
-              className="p-1.5 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded transition-colors"
-            >
-              <Edit size={18} />
-            </button>
-          </Tooltip>
-          <Tooltip content="Duplicate Product">
-            <button
-              onClick={() => navigate(`/products/create?duplicateId=${row.id}`)}
-              className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
-            >
-              <Copy size={18} />
-            </button>
-          </Tooltip>
-          <Tooltip content="Delete Product">
-            <button
-              onClick={() => confirmDelete(row)}
-              className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
-            >
-              <Trash2 size={18} />
-            </button>
-          </Tooltip>
+            <Tooltip content="Duplicate Product">
+              <button
+                onClick={() => navigate(`/products/create?duplicateId=${row.id}`)}
+                className="p-1.5 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded transition-colors"
+              >
+                <Copy size={18} />
+              </button>
+            </Tooltip>
+            <Tooltip content="Delete Product">
+              <button
+                onClick={() => confirmDelete(row)}
+                className="p-1.5 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded transition-colors"
+              >
+                <Trash2 size={18} />
+              </button>
+            </Tooltip>
+          </PermissionGuard>
         </div>
       ),
     },
@@ -470,13 +475,15 @@ const ProductListPage = () => {
               <LayoutGrid className="w-5 h-5" />
             </button>
           </div>
-          <Button
-            variant="primary"
-            icon={Plus}
-            onClick={() => navigate("/products/create")}
-          >
-            Add Product
-          </Button>
+          <PermissionGuard permission="products:manage">
+            <Button
+              variant="primary"
+              icon={Plus}
+              onClick={() => navigate("/products/create")}
+            >
+              Add Product
+            </Button>
+          </PermissionGuard>
         </div>
       </div>
 
@@ -600,33 +607,37 @@ const ProductListPage = () => {
                       onClick={(e) => e.stopPropagation()}
                     >
                       {!product.isActive && (
-                        <button
-                          onClick={() => handleOpenApprove(product)}
-                          className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors"
-                          title="Approve"
-                        >
-                          <Check size={16} />
-                        </button>
+                        <PermissionGuard permission="approvals:products:manage">
+                          <button
+                            onClick={() => handleOpenApprove(product)}
+                            className="p-2 text-slate-400 hover:text-green-600 hover:bg-green-50 rounded-full transition-colors"
+                            title="Approve"
+                          >
+                            <Check size={16} />
+                          </button>
+                        </PermissionGuard>
                       )}
-                      <button
-                        onClick={() => navigate(`/products/edit/${product.id}`)}
-                        className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
-                      >
-                        <Edit size={16} />
-                      </button>
-                      <button
-                        onClick={() => navigate(`/products/create?duplicateId=${product.id}`)}
-                        className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
-                        title="Duplicate"
-                      >
-                        <Copy size={16} />
-                      </button>
-                      <button
-                        onClick={() => confirmDelete(product)}
-                        className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
-                      >
-                        <Trash2 size={16} />
-                      </button>
+                      <PermissionGuard permission="products:manage">
+                        <button
+                          onClick={() => navigate(`/products/edit/${product.id}`)}
+                          className="p-2 text-slate-400 hover:text-blue-600 hover:bg-blue-50 rounded-full transition-colors"
+                        >
+                          <Edit size={16} />
+                        </button>
+                        <button
+                          onClick={() => navigate(`/products/create?duplicateId=${product.id}`)}
+                          className="p-2 text-slate-400 hover:text-purple-600 hover:bg-purple-50 rounded-full transition-colors"
+                          title="Duplicate"
+                        >
+                          <Copy size={16} />
+                        </button>
+                        <button
+                          onClick={() => confirmDelete(product)}
+                          className="p-2 text-slate-400 hover:text-red-600 hover:bg-red-50 rounded-full transition-colors"
+                        >
+                          <Trash2 size={16} />
+                        </button>
+                      </PermissionGuard>
                     </div>
                   </div>
                 </div>

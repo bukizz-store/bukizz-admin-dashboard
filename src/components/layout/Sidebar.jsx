@@ -2,12 +2,14 @@ import React, { useState, useEffect } from "react";
 import { LogOut, ChevronLeft } from "lucide-react";
 import { NavLink, useLocation } from "react-router-dom";
 import { NAV_ITEMS } from "../../config/navigation";
+import { useAuth } from "../../context/AuthContext";
 
 import logoSmall from "../../assets/logo/logo-small.png";
 
 const Sidebar = ({ isOpen, onClose }) => {
   const [isCollapsed, setIsCollapsed] = useState(false);
   const location = useLocation();
+  const { hasPermission, logout } = useAuth();
 
   // Close sidebar on route change (mobile)
   useEffect(() => {
@@ -79,6 +81,15 @@ const Sidebar = ({ isOpen, onClose }) => {
           {NAV_ITEMS.map((item, index) => {
             // Render Group
             if (item.group && item.items) {
+              const visibleSubItems = item.items.filter(
+                (subItem) => !subItem.permission || hasPermission(subItem.permission)
+              );
+
+              // Don't render empty group if all sub-items are unauthorized
+              if (visibleSubItems.length === 0) {
+                return null;
+              }
+
               return (
                 <div key={index} className="mb-6">
                   {!isCollapsed && (
@@ -87,7 +98,7 @@ const Sidebar = ({ isOpen, onClose }) => {
                     </div>
                   )}
                   <div className="space-y-1">
-                    {item.items.map((subItem) => (
+                    {visibleSubItems.map((subItem) => (
                       <NavItem
                         key={subItem.path}
                         item={subItem}
@@ -99,8 +110,12 @@ const Sidebar = ({ isOpen, onClose }) => {
               );
             }
 
-            // Render Single Item (if marked as main group or just standalone)
+            // Render Single Item (if authorized)
             if (item.group === "main") {
+              if (item.permission && !hasPermission(item.permission)) {
+                return null;
+              }
+
               return (
                 <NavItem
                   key={item.path}
@@ -117,6 +132,7 @@ const Sidebar = ({ isOpen, onClose }) => {
         {/* Footer */}
         <div className="p-4 border-t border-slate-800 mt-auto">
           <button
+            onClick={() => logout()}
             className={`w-full flex items-center ${
               isCollapsed ? "justify-center" : "px-4 gap-3"
             } py-2.5 text-slate-400 hover:text-white hover:bg-white/5 rounded-lg transition-all group`}
@@ -150,7 +166,7 @@ const NavItem = ({ item, isCollapsed }) => {
     >
       {({ isActive }) => (
         <>
-          {/* Active Left Border Indicator (Optional polish) */}
+          {/* Active Left Border Indicator */}
           {isActive && !isCollapsed && (
             <div className="absolute left-0 top-1/2 -translate-y-1/2 w-1 h-8 bg-[#f97316] rounded-r-full hidden" />
           )}

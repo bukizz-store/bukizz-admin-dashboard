@@ -2,6 +2,7 @@ import React, { useState, useEffect, useCallback } from "react";
 import { Wallet, AlertTriangle, CheckCircle, RefreshCw } from "lucide-react";
 import { DataTable } from "../../components/common";
 import { Button } from "../../components/ui";
+import PermissionGuard from "../../components/auth/PermissionGuard";
 import InitiatePayoutModal from "../../components/retailers/settlements/InitiatePayoutModal";
 import { useToast } from "../../context/ToastContext";
 import api from "../../services/api";
@@ -181,16 +182,21 @@ const AdminGlobalSettlements = () => {
       accessor: "action",
       render: (row) => (
         <div className="flex justify-end">
-          <Button
-            size="sm"
-            onClick={(e) => {
-              e.stopPropagation();
-              handlePayNow(row);
-            }}
-            className="bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500 text-white whitespace-nowrap"
+          <PermissionGuard
+            permission="settlements:manage"
+            fallback={<span className="text-xs text-slate-400">View Only</span>}
           >
-            Pay Now
-          </Button>
+            <Button
+              size="sm"
+              onClick={(e) => {
+                e.stopPropagation();
+                handlePayNow(row);
+              }}
+              className="bg-emerald-600 hover:bg-emerald-700 focus:ring-emerald-500 text-white whitespace-nowrap"
+            >
+              Pay Now
+            </Button>
+          </PermissionGuard>
         </div>
       ),
     },
