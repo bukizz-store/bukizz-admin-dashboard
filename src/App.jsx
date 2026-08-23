@@ -74,6 +74,9 @@ function App() {
             {/* Base Protected Dashboard Routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<MainLayout />}>
+                {/* Index Route -> default to schools */}
+                <Route index element={<Navigate to="/schools" replace />} />
+
                 {/* Categories */}
                 <Route
                   path="/categories"

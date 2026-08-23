@@ -43,12 +43,11 @@ export const getCurrentUserAPI = async () => {
 
   // Handle direct resource return (no envelope) or enveloped return
   if (response.data && response.data.success === undefined) {
-    // Assuming if we got here (200 OK via axios), it's the user object
-    return response.data;
+    return response.data?.user || response.data;
   }
 
   if (response.data.success) {
-    return response.data.data;
+    return response.data.data?.user || response.data.data;
   } else {
     throw new Error(response.data.message);
   }
@@ -57,7 +56,7 @@ export const getCurrentUserAPI = async () => {
 export const verifyTokenAPI = async () => {
   const response = await api.get("/auth/verify-token");
   if (response.data.success) {
-    return response.data.data;
+    return response.data.data?.user || response.data.data;
   } else {
     throw new Error(response.data.message);
   }

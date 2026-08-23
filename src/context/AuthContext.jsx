@@ -26,20 +26,33 @@ export const AuthProvider = ({ children }) => {
   const [isLoading, setIsLoading] = useState(true);
   const toast = useToast();
 
-  // Normalize permissions array from user payload
-  const permissions = useMemo(() => {
-    if (!user) return [];
-    if (Array.isArray(user.permissions)) return user.permissions;
-    return [];
+  // Helper to extract clean unwrapped user object
+  const effectiveUser = useMemo(() => {
+    if (!user) return null;
+    return user.user && typeof user.user === "object" ? user.user : user;
   }, [user]);
 
-  // Master bypass check (superadmin role bypasses all permission restrictions)
+  // Normalize permissions array from user payload
+  const permissions = useMemo(() => {
+    if (!effectiveUser) return [];
+    if (Array.isArray(effectiveUser.permissions)) return effectiveUser.permissions;
+    return [];
+  }, [effectiveUser]);
+
+  // Master bypass check (superadmin or admin role bypasses all permission restrictions)
   const isSuperAdmin = useMemo(() => {
-    if (!user) return false;
-    const role = user.role || "";
-    const roles = Array.isArray(user.roles) ? user.roles : [];
-    return role === "superadmin" || roles.includes("superadmin");
-  }, [user]);
+    if (!effectiveUser) return false;
+    const role = String(effectiveUser.role || "").toLowerCase();
+    const roles = Array.isArray(effectiveUser.roles)
+      ? effectiveUser.roles.map((r) => String(r).toLowerCase())
+      : [];
+    return (
+      role === "superadmin" ||
+      role === "admin" ||
+      roles.includes("superadmin") ||
+      roles.includes("admin")
+    );
+  }, [effectiveUser]);
 
   /**
    * Evaluates if the authenticated user possesses a specific action permission.
@@ -49,12 +62,12 @@ export const AuthProvider = ({ children }) => {
    */
   const hasPermission = useCallback(
     (requiredPermission) => {
-      if (!isAuthenticated || !user) return false;
+      if (!isAuthenticated || !effectiveUser) return false;
       if (isSuperAdmin) return true;
       if (!requiredPermission) return true;
       return permissions.includes(requiredPermission);
     },
-    [isAuthenticated, user, isSuperAdmin, permissions]
+    [isAuthenticated, effectiveUser, isSuperAdmin, permissions]
   );
 
   /**
@@ -64,12 +77,12 @@ export const AuthProvider = ({ children }) => {
    */
   const hasAnyPermission = useCallback(
     (permissionsList = []) => {
-      if (!isAuthenticated || !user) return false;
+      if (!isAuthenticated || !effectiveUser) return false;
       if (isSuperAdmin) return true;
       if (!permissionsList || permissionsList.length === 0) return true;
       return permissionsList.some((perm) => permissions.includes(perm));
     },
-    [isAuthenticated, user, isSuperAdmin, permissions]
+    [isAuthenticated, effectiveUser, isSuperAdmin, permissions]
   );
 
   /**
@@ -79,12 +92,12 @@ export const AuthProvider = ({ children }) => {
    */
   const hasAllPermissions = useCallback(
     (permissionsList = []) => {
-      if (!isAuthenticated || !user) return false;
+      if (!isAuthenticated || !effectiveUser) return false;
       if (isSuperAdmin) return true;
       if (!permissionsList || permissionsList.length === 0) return true;
       return permissionsList.every((perm) => permissions.includes(perm));
     },
-    [isAuthenticated, user, isSuperAdmin, permissions]
+    [isAuthenticated, effectiveUser, isSuperAdmin, permissions]
   );
 
   // Initialize Auth State on Mount
@@ -94,7 +107,8 @@ export const AuthProvider = ({ children }) => {
       if (token) {
         try {
           const userData = await getCurrentUserAPI();
-          setUser(userData);
+          const resolvedUser = userData?.user || userData;
+          setUser(resolvedUser);
           setIsAuthenticated(true);
         } catch (error) {
           console.error("Auth Initialization Failed:", error);
@@ -127,12 +141,13 @@ export const AuthProvider = ({ children }) => {
         };
       }
 
-      setUser(data.user);
+      const resolvedUser = data?.user || data;
+      setUser(resolvedUser);
       setIsAuthenticated(true);
 
       localStorage.setItem("accessToken", accessToken);
       if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
-      localStorage.setItem("user", JSON.stringify(data.user));
+      localStorage.setItem("user", JSON.stringify(resolvedUser));
 
       return { success: true };
     } catch (error) {
@@ -155,10 +170,12 @@ export const AuthProvider = ({ children }) => {
       const refreshToken = data.refreshToken || data.refresh_token;
 
       if (accessToken) {
-        setUser(data.user);
+        const resolvedUser = data?.user || data;
+        setUser(resolvedUser);
         setIsAuthenticated(true);
         localStorage.setItem("accessToken", accessToken);
         if (refreshToken) localStorage.setItem("refreshToken", refreshToken);
+        localStorage.setItem("user", JSON.stringify(resolvedUser));
       }
 
       return { success: true };
@@ -196,7 +213,7 @@ export const AuthProvider = ({ children }) => {
   return (
     <AuthContext.Provider
       value={{
-        user,
+        user: effectiveUser,
         permissions,
         isSuperAdmin,
         isAuthenticated,
