@@ -40,6 +40,7 @@ const ProductDetailPage = () => {
   const [showApproveModal, setShowApproveModal] = useState(false);
   const [showDeleteModal, setShowDeleteModal] = useState(false);
   const [deliveryCharge, setDeliveryCharge] = useState("");
+  const [deliveryHours, setDeliveryHours] = useState("24");
   const [isApproving, setIsApproving] = useState(false);
   const [isDeleting, setIsDeleting] = useState(false);
 
@@ -136,6 +137,7 @@ const ProductDetailPage = () => {
     try {
       const response = await api.patch(`/products/${id}/activate`, {
         deliveryCharge: Number(deliveryCharge),
+        deliveryHours: Number(deliveryHours) || 24,
         variantCommissions: variantCommissions.map((vc) => ({
           variantId: vc.variantId,
           commissionType: vc.commissionType,
@@ -150,6 +152,7 @@ const ProductDetailPage = () => {
           ...product,
           is_active: true,
           delivery_charge: Number(deliveryCharge),
+          delivery_hours: Number(deliveryHours) || 24,
           paymentMethods: selectedPaymentMethods,
           variantCommissions: variantCommissions,
         });
@@ -918,14 +921,33 @@ const ProductDetailPage = () => {
             </div>
 
             <div className="p-6 space-y-6">
-              {/* Delivery Charge */}
-              <Input
-                label="Delivery Charge (₹)"
-                type="number"
-                placeholder="e.g. 50"
-                value={deliveryCharge}
-                onChange={(e) => setDeliveryCharge(e.target.value)}
-              />
+              {/* Retailer Packaging Time Indicator */}
+              <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between text-xs text-amber-900">
+                <span className="font-medium">Retailer Packaging / Prep Time:</span>
+                <span className="font-bold text-amber-950 bg-amber-100/80 px-2.5 py-1 rounded border border-amber-300">
+                  {product?.packaging_hours || product?.packagingHours || product?.metadata?.packagingHours || 4} Hours
+                </span>
+              </div>
+
+              {/* Delivery Charge & Delivery Hours */}
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                <Input
+                  label="Delivery Charge (₹)"
+                  type="number"
+                  placeholder="e.g. 50"
+                  value={deliveryCharge}
+                  onChange={(e) => setDeliveryCharge(e.target.value)}
+                />
+                <Input
+                  label="Estimated Delivery Time (Hours)"
+                  type="number"
+                  min="1"
+                  placeholder="e.g. 24"
+                  value={deliveryHours}
+                  onChange={(e) => setDeliveryHours(e.target.value)}
+                  helperText="Transit time for delivery partner/courier"
+                />
+              </div>
 
               {/* Variant Commissions */}
               {variantCommissions.length > 0 &&

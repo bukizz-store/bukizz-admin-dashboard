@@ -44,6 +44,7 @@ const ProductListPage = () => {
   const [approveProduct, setApproveProduct] = useState(null);
   const [approveLoading, setApproveLoading] = useState(false);
   const [approveDeliveryCharge, setApproveDeliveryCharge] = useState("");
+  const [approveDeliveryHours, setApproveDeliveryHours] = useState("24");
   const [approveCommissions, setApproveCommissions] = useState([]);
   const [approvePaymentMethods, setApprovePaymentMethods] = useState(
     PAYMENT_METHODS.map((pm) => pm.value)
@@ -204,6 +205,7 @@ const ProductListPage = () => {
     setApproveLoading(true);
     setShowApproveModal(true);
     setApproveDeliveryCharge("");
+    setApproveDeliveryHours("24");
     setApprovePaymentMethods(PAYMENT_METHODS.map((pm) => pm.value));
 
     try {
@@ -212,6 +214,9 @@ const ProductListPage = () => {
       if (response.data?.success) {
         const data = response.data.data.product;
         setApproveProduct(data);
+        if (data.deliveryHours || data.delivery_hours) {
+          setApproveDeliveryHours(String(data.deliveryHours || data.delivery_hours));
+        }
         const existingCommissions = data.variantCommissions || [];
         setApproveCommissions(
           (data.variants || []).map((v) => {
@@ -242,6 +247,9 @@ const ProductListPage = () => {
     if (!approveDeliveryCharge && approveDeliveryCharge !== 0) {
       return toast.error("Please enter a delivery charge");
     }
+    if (!approveDeliveryHours && approveDeliveryHours !== 0) {
+      return toast.error("Please enter estimated delivery hours");
+    }
     const hasEmpty = approveCommissions.some((vc) => vc.commissionValue === "" || vc.commissionValue === undefined);
     if (hasEmpty) return toast.error("Please set commission for all variants");
     if (approvePaymentMethods.length === 0) return toast.error("Select at least one payment method");
@@ -250,6 +258,7 @@ const ProductListPage = () => {
     try {
       const response = await api.patch(`/products/${approveProduct.id}/activate`, {
         deliveryCharge: Number(approveDeliveryCharge),
+        deliveryHours: Number(approveDeliveryHours) || 24,
         variantCommissions: approveCommissions.map((vc) => ({
           variantId: vc.variantId,
           commissionType: vc.commissionType,
@@ -690,14 +699,33 @@ const ProductListPage = () => {
             ) : (
               <>
                 <div className="p-6 space-y-6">
-                  {/* Delivery Charge */}
-                  <Input
-                    label="Delivery Charge (₹)"
-                    type="number"
-                    placeholder="e.g. 50"
-                    value={approveDeliveryCharge}
-                    onChange={(e) => setApproveDeliveryCharge(e.target.value)}
-                  />
+                  {/* Retailer Packaging Time Indicator */}
+                  <div className="bg-amber-50 border border-amber-200 rounded-lg p-3 flex items-center justify-between text-xs text-amber-900">
+                    <span className="font-medium">Retailer Packaging / Prep Time:</span>
+                    <span className="font-bold text-amber-950 bg-amber-100/80 px-2.5 py-1 rounded border border-amber-300">
+                      {approveProduct?.packaging_hours || approveProduct?.packagingHours || approveProduct?.metadata?.packagingHours || 4} Hours
+                    </span>
+                  </div>
+
+                  {/* Delivery Charge & Delivery Hours */}
+                  <div className="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                    <Input
+                      label="Delivery Charge (₹)"
+                      type="number"
+                      placeholder="e.g. 50"
+                      value={approveDeliveryCharge}
+                      onChange={(e) => setApproveDeliveryCharge(e.target.value)}
+                    />
+                    <Input
+                      label="Estimated Delivery Time (Hours)"
+                      type="number"
+                      min="1"
+                      placeholder="e.g. 24"
+                      value={approveDeliveryHours}
+                      onChange={(e) => setApproveDeliveryHours(e.target.value)}
+                      helperText="Transit time for delivery partner/courier"
+                    />
+                  </div>
 
                   {/* Variant Commissions */}
                   {approveCommissions.length > 0 && (

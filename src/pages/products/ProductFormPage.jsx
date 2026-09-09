@@ -37,6 +37,7 @@ const ProductFormPage = () => {
     fullDescription: "",
     basePrice: "",
     compareAtPrice: "", // Added compareAtPrice
+    packagingHours: 4,
     deliveryHours: 24,
   });
 
@@ -94,6 +95,11 @@ const ProductFormPage = () => {
           setFormData({
             ...product.productData,
             fullDescription: product.productData.description || "",
+            packagingHours:
+              product.productData.packagingHours ||
+              product.productData.packaging_hours ||
+              product.productData.metadata?.packagingHours ||
+              4,
             deliveryHours: product.productData.deliveryHours || 24,
             // In duplicate mode, clear SKU so user must provide a new one
             sku: isDuplicateMode ? "" : product.productData.sku,
@@ -640,6 +646,7 @@ const ProductFormPage = () => {
           productType: productType === "school" ? schoolProductType : "general",
           basePrice: Number(formData.basePrice),
           compareAtPrice: Number(formData.compareAtPrice),
+          packagingHours: parseInt(formData.packagingHours) || 4,
           deliveryHours: parseInt(formData.deliveryHours) || 24,
           shortDescription: formData.shortDescription,
           description: formData.fullDescription,
@@ -647,6 +654,8 @@ const ProductFormPage = () => {
           currency: "INR",
           highlight: { ...highlightsObject },
           metadata: {
+            packagingHours: parseInt(formData.packagingHours) || 4,
+            deliveryHours: parseInt(formData.deliveryHours) || 24,
             categoryAttributes: { ...metadata },
             compare_price: Number(formData.compareAtPrice), // compareAtPrice of highest discount variant
             customerMessage: {

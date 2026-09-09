@@ -366,15 +366,26 @@ const ProductBasicInfo = ({
           }
         />
         <Input
-          label="Estimated Delivery Hours"
+          label="Packaging / Prep Time (Hours)"
+          type="number"
+          min="1"
+          placeholder="4"
+          value={formData.packagingHours || 4}
+          onChange={(e) =>
+            setFormData({ ...formData, packagingHours: e.target.value })
+          }
+          helperText="Time taken to prepare and pack the product for dispatch."
+        />
+        <Input
+          label="Transit / Delivery Time (Hours)"
           type="number"
           min="1"
           placeholder="24"
-          value={formData.deliveryHours}
+          value={formData.deliveryHours || 24}
           onChange={(e) =>
             setFormData({ ...formData, deliveryHours: e.target.value })
           }
-          helperText="Enter the estimated hours it takes to deliver this product. The main website uses this to calculate if the delivery will be 'Same Day' or 'Next Day' based on our 8 AM - 10 PM working hours."
+          helperText="Transit hours for courier / delivery partner."
         />
       </div>
 
