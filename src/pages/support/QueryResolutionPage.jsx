@@ -17,6 +17,7 @@ import {
   updateQueryStatus,
 } from "../../services/queryService";
 import { Button } from "../../components/ui";
+import PermissionGuard from "../../components/auth/PermissionGuard";
 
 // ─── Helpers ──────────────────────────────────────────────────────────────────
 
@@ -220,15 +221,17 @@ const QueryResolutionPage = () => {
 
           <div className="flex items-center gap-2">
             {status !== "resolved" && (
-              <Button
-                variant="outline"
-                className="border-green-200 text-green-700 hover:bg-green-50 font-bold text-xs uppercase tracking-wide"
-                icon={CheckCircle}
-                onClick={handleResolve}
-                disabled={statusUpdating}
-              >
-                {statusUpdating ? "Updating…" : "Mark Resolved"}
-              </Button>
+              <PermissionGuard permission="support:queries:manage">
+                <Button
+                  variant="outline"
+                  className="border-green-200 text-green-700 hover:bg-green-50 font-bold text-xs uppercase tracking-wide"
+                  icon={CheckCircle}
+                  onClick={handleResolve}
+                  disabled={statusUpdating}
+                >
+                  {statusUpdating ? "Updating…" : "Mark Resolved"}
+                </Button>
+              </PermissionGuard>
             )}
             <button className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50">
               <MoreVertical size={20} />
@@ -300,37 +303,39 @@ const QueryResolutionPage = () => {
           })}
 
           {/* Reply composer */}
-          <div className="flex gap-5 pt-4 max-w-4xl">
-            <div className="w-10 h-10 rounded-full bg-bukizz-orange flex items-center justify-center text-white shrink-0 shadow-md shadow-orange-200">
-              <span className="font-bold text-xs">ME</span>
-            </div>
-            <div className="flex-1">
-              <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm focus-within:ring-2 focus-within:ring-orange-100 focus-within:border-bukizz-orange transition-all">
-                <textarea
-                  className="w-full p-4 bg-transparent border-none focus:ring-0 text-sm min-h-35 resize-none"
-                  placeholder="Type your reply here... (Markdown supported)"
-                  value={replyText}
-                  onChange={(e) => setReplyText(e.target.value)}
-                />
-                <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
-                  <div className="flex items-center gap-2">
-                    <button className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
-                      <Paperclip size={18} />
-                    </button>
+          <PermissionGuard permission="support:queries:manage">
+            <div className="flex gap-5 pt-4 max-w-4xl">
+              <div className="w-10 h-10 rounded-full bg-bukizz-orange flex items-center justify-center text-white shrink-0 shadow-md shadow-orange-200">
+                <span className="font-bold text-xs">ME</span>
+              </div>
+              <div className="flex-1">
+                <div className="relative bg-white rounded-2xl border border-slate-200 shadow-sm focus-within:ring-2 focus-within:ring-orange-100 focus-within:border-bukizz-orange transition-all">
+                  <textarea
+                    className="w-full p-4 bg-transparent border-none focus:ring-0 text-sm min-h-35 resize-none"
+                    placeholder="Type your reply here... (Markdown supported)"
+                    value={replyText}
+                    onChange={(e) => setReplyText(e.target.value)}
+                  />
+                  <div className="px-4 py-3 border-t border-slate-100 flex items-center justify-between">
+                    <div className="flex items-center gap-2">
+                      <button className="p-2 text-slate-400 hover:text-slate-600 rounded-lg hover:bg-slate-50 transition-colors">
+                        <Paperclip size={18} />
+                      </button>
+                    </div>
+                    <Button
+                      variant="primary"
+                      icon={Send}
+                      className="bg-bukizz-orange hover:bg-orange-600 text-white shadow-md shadow-orange-100 font-bold px-6"
+                      disabled={!replyText.trim() || sending}
+                      onClick={handleSendReply}
+                    >
+                      {sending ? "Sending…" : "Send Reply"}
+                    </Button>
                   </div>
-                  <Button
-                    variant="primary"
-                    icon={Send}
-                    className="bg-bukizz-orange hover:bg-orange-600 text-white shadow-md shadow-orange-100 font-bold px-6"
-                    disabled={!replyText.trim() || sending}
-                    onClick={handleSendReply}
-                  >
-                    {sending ? "Sending…" : "Send Reply"}
-                  </Button>
                 </div>
               </div>
             </div>
-          </div>
+          </PermissionGuard>
         </div>
       </div>
 

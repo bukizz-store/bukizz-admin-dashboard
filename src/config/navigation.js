@@ -14,6 +14,8 @@ import {
   Wallet,
   Image as ImageIcon,
   Truck,
+  Users,
+  Shield,
 } from "lucide-react";
 
 export const NAV_ITEMS = [
@@ -150,6 +152,23 @@ export const NAV_ITEMS = [
       },
     ],
   },
+  {
+    group: "Access Control",
+    items: [
+      {
+        path: "/admin/users/roles",
+        label: "User Roles",
+        icon: Users,
+        permission: "users:read",
+      },
+      {
+        path: "/admin/roles",
+        label: "Role Builder",
+        icon: Shield,
+        permission: "users:manage",
+      },
+    ],
+  },
 ];
 
 // Helper map for Breadcrumbs and Page Titles
@@ -159,6 +178,8 @@ export const PATH_LABEL_MAP = {
   "/schools": "Schools",
   "/retailers": "Retailers",
   "/admin/delivery-partners": "Delivery Partners",
+  "/admin/users/roles": "User Roles",
+  "/admin/roles": "Role & Permissions Builder",
   "/schools/add": "Onboard School",
   "/products": "All Products",
   "/products/school": "School Products",

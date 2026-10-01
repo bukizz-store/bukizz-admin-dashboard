@@ -3,6 +3,7 @@ import { Plus, Edit, Trash2, Image as ImageIcon } from "lucide-react";
 import { Link, useNavigate } from "react-router-dom";
 import bannerService from "../../services/bannerService";
 import { useToast } from "../../context/ToastContext";
+import PermissionGuard from "../../components/auth/PermissionGuard";
 
 const BannerListPage = () => {
   const [banners, setBanners] = useState([]);
@@ -52,13 +53,15 @@ const BannerListPage = () => {
     <div className="container mx-auto px-4 py-8">
       <div className="flex justify-between items-center mb-6">
         <h1 className="text-2xl font-bold text-gray-800">Banners</h1>
-        <Link
-          to="/banners/create"
-          className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center shadow-sm transition-colors"
-        >
-          <Plus className="w-5 h-5 mr-2" />
-          Add Banner
-        </Link>
+        <PermissionGuard permission="banners:manage">
+          <Link
+            to="/banners/create"
+            className="bg-primary hover:bg-primary/90 text-white px-4 py-2 rounded-lg flex items-center shadow-sm transition-colors"
+          >
+            <Plus className="w-5 h-5 mr-2" />
+            Add Banner
+          </Link>
+        </PermissionGuard>
       </div>
 
       <div className="bg-white rounded-xl shadow-sm border border-gray-100 overflow-hidden">
@@ -132,22 +135,24 @@ const BannerListPage = () => {
                       </span>
                     </td>
                     <td className="px-6 py-4 whitespace-nowrap text-right text-sm font-medium">
-                      <div className="flex justify-end gap-3">
-                        <button
-                          onClick={() => navigate(`/banners/edit/${banner.id}`, { state: { banner } })}
-                          className="text-indigo-600 hover:text-indigo-900 p-1"
-                          title="Edit"
-                        >
-                          <Edit className="w-5 h-5" />
-                        </button>
-                        <button
-                          onClick={() => handleDelete(banner.id)}
-                          className="text-red-600 hover:text-red-900 p-1"
-                          title="Delete"
-                        >
-                          <Trash2 className="w-5 h-5" />
-                        </button>
-                      </div>
+                      <PermissionGuard permission="banners:manage">
+                        <div className="flex justify-end gap-3">
+                          <button
+                            onClick={() => navigate(`/banners/edit/${banner.id}`, { state: { banner } })}
+                            className="text-indigo-600 hover:text-indigo-900 p-1"
+                            title="Edit"
+                          >
+                            <Edit className="w-5 h-5" />
+                          </button>
+                          <button
+                            onClick={() => handleDelete(banner.id)}
+                            className="text-red-600 hover:text-red-900 p-1"
+                            title="Delete"
+                          >
+                            <Trash2 className="w-5 h-5" />
+                          </button>
+                        </div>
+                      </PermissionGuard>
                     </td>
                   </tr>
                 ))

@@ -34,34 +34,14 @@ import BannerFormPage from "./pages/banners/BannerFormPage";
 import Login from "./pages/auth/Login";
 import Register from "./pages/auth/Register";
 import UserProfile from "./pages/profile/UserProfile";
+import UserRoleManagementPage from "./pages/admin/UserRoleManagementPage";
+import RoleBuilderPage from "./pages/admin/RoleBuilderPage";
 import ProtectedRoute from "./components/auth/ProtectedRoute";
-import { AuthProvider } from "./context/AuthContext";
+import AdminDashboardPage from "./pages/dashboard/AdminDashboardPage";
+import { AuthProvider, useAuth } from "./context/AuthContext";
 import { ToastProvider } from "./context/ToastContext";
-import { NAV_ITEMS } from "./config/navigation";
 
 function App() {
-  const renderDashboardRoutes = () => {
-    const paths = [];
-    NAV_ITEMS.forEach((item) => {
-      if (item.path) paths.push(item.path);
-      if (item.items) {
-        item.items.forEach((subItem) => {
-          if (subItem.path) paths.push(subItem.path);
-        });
-      }
-    });
-
-    return paths.map((path) => {
-      if (path === "/categories") {
-        return <Route key={path} path={path} element={<CategoriesPage />} />;
-      }
-      if (path === "/schools") {
-        return <Route key={path} path={path} element={<SchoolsListPage />} />;
-      }
-      return <Route key={path} path={path} element={<PagePlaceholder />} />;
-    });
-  };
-
   return (
     <ToastProvider>
       <AuthProvider>
@@ -74,8 +54,8 @@ function App() {
             {/* Base Protected Dashboard Routes */}
             <Route element={<ProtectedRoute />}>
               <Route path="/" element={<MainLayout />}>
-                {/* Index Route -> default to schools */}
-                <Route index element={<Navigate to="/schools" replace />} />
+                {/* Main E-commerce Executive Admin Dashboard */}
+                <Route index element={<AdminDashboardPage />} />
 
                 {/* Categories */}
                 <Route
@@ -222,6 +202,22 @@ function App() {
                     </ProtectedRoute>
                   }
                 />
+                <Route
+                  path="/products/school"
+                  element={
+                    <ProtectedRoute requiredPermission="products:read">
+                      <PagePlaceholder />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/products/general"
+                  element={
+                    <ProtectedRoute requiredPermission="products:read">
+                      <PagePlaceholder />
+                    </ProtectedRoute>
+                  }
+                />
 
                 {/* Approvals */}
                 <Route
@@ -363,7 +359,24 @@ function App() {
                   }
                 />
 
-                {renderDashboardRoutes()}
+                {/* Access Control & RBAC Admin Routes */}
+                <Route
+                  path="/admin/users/roles"
+                  element={
+                    <ProtectedRoute requiredPermission="users:read">
+                      <UserRoleManagementPage />
+                    </ProtectedRoute>
+                  }
+                />
+                <Route
+                  path="/admin/roles"
+                  element={
+                    <ProtectedRoute requiredPermission="users:manage">
+                      <RoleBuilderPage />
+                    </ProtectedRoute>
+                  }
+                />
+
                 <Route path="profile" element={<UserProfile />} />
                 <Route
                   path="*"

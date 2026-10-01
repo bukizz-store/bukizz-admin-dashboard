@@ -1,7 +1,7 @@
 import React from "react";
 import { Navigate, Outlet, useLocation } from "react-router-dom";
 import { useAuth } from "../../context/AuthContext";
-import { Loader2 } from "lucide-react";
+import { Loader2, ShieldAlert } from "lucide-react";
 
 /**
  * ProtectedRoute
@@ -44,15 +44,49 @@ const ProtectedRoute = ({
 
   // Permission Checks
   if (requiredPermission && !hasPermission(requiredPermission)) {
-    return <Navigate to={redirectTo} state={{ unauthorized: true, from: location }} replace />;
+    return (
+      <div className="p-8 max-w-lg mx-auto text-center space-y-4 my-12 bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto">
+          <ShieldAlert size={24} />
+        </div>
+        <h2 className="text-lg font-bold text-slate-800">Access Restricted</h2>
+        <p className="text-sm text-slate-500">
+          Your assigned administrative role does not have permission to view this section (
+          <code className="text-xs bg-slate-100 px-1 py-0.5 rounded font-mono font-semibold text-slate-700">
+            {requiredPermission}
+          </code>
+          ).
+        </p>
+      </div>
+    );
   }
 
   if (anyPermissions && anyPermissions.length > 0 && !hasAnyPermission(anyPermissions)) {
-    return <Navigate to={redirectTo} state={{ unauthorized: true, from: location }} replace />;
+    return (
+      <div className="p-8 max-w-lg mx-auto text-center space-y-4 my-12 bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto">
+          <ShieldAlert size={24} />
+        </div>
+        <h2 className="text-lg font-bold text-slate-800">Access Restricted</h2>
+        <p className="text-sm text-slate-500">
+          Your assigned administrative role does not have permission to access this resource.
+        </p>
+      </div>
+    );
   }
 
   if (allPermissions && allPermissions.length > 0 && !hasAllPermissions(allPermissions)) {
-    return <Navigate to={redirectTo} state={{ unauthorized: true, from: location }} replace />;
+    return (
+      <div className="p-8 max-w-lg mx-auto text-center space-y-4 my-12 bg-white rounded-xl border border-slate-200 shadow-sm">
+        <div className="w-12 h-12 rounded-full bg-red-50 text-red-500 flex items-center justify-center mx-auto">
+          <ShieldAlert size={24} />
+        </div>
+        <h2 className="text-lg font-bold text-slate-800">Access Restricted</h2>
+        <p className="text-sm text-slate-500">
+          Your assigned administrative role does not have permission to access this resource.
+        </p>
+      </div>
+    );
   }
 
   return children ? <>{children}</> : <Outlet />;

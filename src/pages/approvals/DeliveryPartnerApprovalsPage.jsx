@@ -6,6 +6,7 @@ import Button from "../../components/ui/Button";
 import ConfirmationModal from "../../components/ui/ConfirmationModal";
 import { useToast } from "../../context/ToastContext";
 import api from "../../services/api";
+import PermissionGuard from "../../components/auth/PermissionGuard";
 
 const DeliveryPartnerApprovalsPage = () => {
   const navigate = useNavigate();
@@ -193,32 +194,34 @@ const DeliveryPartnerApprovalsPage = () => {
       header: "Actions",
       key: "actions",
       render: (row) => (
-        <div className="flex items-center gap-2">
-          <Button
-            size="sm"
-            className="bg-green-600 hover:bg-green-700 text-white"
-            onClick={(e) => {
-              e.stopPropagation();
-              confirmApprove(row);
-            }}
-            icon={CheckCircle}
-          >
-            Approve
-          </Button>
-          <Button
-            variant="ghost"
-            size="sm"
-            className="text-red-600 hover:bg-red-50 hover:text-red-700"
-            onClick={(e) => {
-              e.stopPropagation();
-              setSelectedPartner(row);
-              setIsRejectModalOpen(true);
-            }}
-            icon={XCircle}
-          >
-            Reject
-          </Button>
-        </div>
+        <PermissionGuard permission="approvals:delivery_partners:manage">
+          <div className="flex items-center gap-2">
+            <Button
+              size="sm"
+              className="bg-green-600 hover:bg-green-700 text-white"
+              onClick={(e) => {
+                e.stopPropagation();
+                confirmApprove(row);
+              }}
+              icon={CheckCircle}
+            >
+              Approve
+            </Button>
+            <Button
+              variant="ghost"
+              size="sm"
+              className="text-red-600 hover:bg-red-50 hover:text-red-700"
+              onClick={(e) => {
+                e.stopPropagation();
+                setSelectedPartner(row);
+                setIsRejectModalOpen(true);
+              }}
+              icon={XCircle}
+            >
+              Reject
+            </Button>
+          </div>
+        </PermissionGuard>
       ),
     },
   ];

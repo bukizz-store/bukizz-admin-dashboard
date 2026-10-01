@@ -39,18 +39,16 @@ export const AuthProvider = ({ children }) => {
     return [];
   }, [effectiveUser]);
 
-  // Master bypass check (superadmin or admin role bypasses all permission restrictions)
+  // Master bypass check: ONLY 'superadmin' role bypasses all permission restrictions
   const isSuperAdmin = useMemo(() => {
     if (!effectiveUser) return false;
-    const role = String(effectiveUser.role || "").toLowerCase();
+    const directRole = String(effectiveUser.role || "").toLowerCase();
     const roles = Array.isArray(effectiveUser.roles)
       ? effectiveUser.roles.map((r) => String(r).toLowerCase())
       : [];
     return (
-      role === "superadmin" ||
-      role === "admin" ||
-      roles.includes("superadmin") ||
-      roles.includes("admin")
+      directRole === "superadmin" ||
+      roles.includes("superadmin")
     );
   }, [effectiveUser]);
 
